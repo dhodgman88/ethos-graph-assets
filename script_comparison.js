@@ -184,11 +184,11 @@ function updateCharts() {
 
   let svg = d3.select('#chart svg');
   if (!svg.node()) {
-    svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible');
+    svg = d3.select('#chart').append('svg').attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
     console.log('Created new SVG in #chart');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', width).attr('height', height).style('overflow', 'visible');
+    svg.attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
   }
   console.log('Rendering radar in:', svg.node());
 
@@ -220,7 +220,7 @@ function updateCharts() {
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
     const radius = radialScale(1);
-    const labelRadius = radius * 2.5 + 20; // Add 20px manual offset
+    const labelRadius = radius * 3.5;
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
     return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
@@ -243,9 +243,11 @@ function updateCharts() {
     .attr("y", d => d.label_coord.y)
     .attr("text-anchor", d => {
       const dx = d.label_coord.x - centerX;
-      return dx < -40 ? "start" : dx > 40 ? "end" : "middle";
+      if (dx < -40) return "start";
+      if (dx > 40) return "end";
+      return "middle";
     })
-    .style("font-size", "12px")
+    .style("font-size", "10px") // Reduce to 10px to fit better
     .style("dominant-baseline", "middle")
     .style("white-space", "normal")
     .each(function(d) {
