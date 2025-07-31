@@ -459,16 +459,18 @@ if (contrast1 && contrast2) {
               showLine: false
             }]
           },
-          options: {
-            indexAxis: 'y', // Horizontal orientation
-            layout: {
-              padding: {
-                left: 150, // Increased space for left labels
-                right: 150, // Increased space for right labels
-                top: 20, // Added top spacing
-                bottom: 20 // Added bottom spacing
-              }
-            },
+	options: {
+ 	   responsive: true, // Add this to enable responsiveness
+   	 maintainAspectRatio: false, // Add this to allow height adjustment
+  	  indexAxis: 'y', // Horizontal orientation
+ 	   layout: {
+  	    padding: {
+   	     left: 150, // Increased space for left labels
+   	     right: 150, // Increased space for right labels
+   	     top: 20, // Added top spacing
+  	      bottom: 20 // Added bottom spacing
+  	    }
+	    },
             scales: {
               x: {
                 min: 0,
