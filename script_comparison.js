@@ -188,11 +188,11 @@ function updateCharts() {
 
   let svg = d3.select('#chart svg');
   if (!svg.node()) {
-    svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height);
-    console.log('Created new SVG in #chart');
+    svg = d3.select('#chart').append('svg').attr('width', 700).attr('height', 400).style('overflow', 'visible');
+    console.log('Created new SVG in #chart with visible overflow');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', width).attr('height', height);
+    svg.attr('width', 700).attr('height', 400).style('overflow', 'visible');
   }
   console.log('Rendering radar in:', svg.node());
 
@@ -230,7 +230,7 @@ function updateCharts() {
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
     const radius = radialScale(1); // Adjusted based on new scale
-    const labelRadius = radius * 2.5; // Increased for more label space
+    const labelRadius = radius * 3; // Increased for more label space
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
     return {
