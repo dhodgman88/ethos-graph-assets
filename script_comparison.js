@@ -316,55 +316,123 @@
 	});
 
       // Continuum Chart (ContrastScores)
-      let barChart = Chart.getChart('bar-chart');
-      if (barChart) barChart.destroy();
-      const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
-      const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
-      if (contrast1 && contrast2) {
-	console.log('Initializing bar chart with:', { contrast1, contrast2 });	      
-        const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
-        const annotations = [];
-        labels.forEach((label, index) => {
-          const parts = label.split(' to ');
-          const left = parts[0] || '';
-          const right = parts[1] || '';
-          // Continuum line
-          annotations.push({
-            type: 'line',
-            yMin: label,
-            yMax: label,
-            xMin: 0,
-            xMax: 1,
-            borderColor: 'gray',
-            borderWidth: 2
-          });
-          // Left label
-          annotations.push({
-            type: 'label',
-            xValue: 0,
-            yValue: label,
-            content: left,
-            position: { x: 'start', y: 'center' },
-            xAdjust: -150, // Adjusted for more space
-            yAdjust: 0,
-            backgroundColor: 'transparent',
-            color: 'black',
-            font: { size: 12 }
-          });
-          // Right label
-          annotations.push({
-            type: 'label',
-            xValue: 1,
-            yValue: label,
-            content: right,
-            position: { x: 'end', y: 'center' },
-            xAdjust: 150, // Adjusted for more space
-            yAdjust: 0,
-            backgroundColor: 'transparent',
-            color: 'black',
-            font: { size: 12 }
-          });
-        });   
+let barChart = Chart.getChart('bar-chart');
+if (barChart) barChart.destroy(); // Clear previous chart instance
+const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
+const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
+if (contrast1 && contrast2) {
+  console.log('Initializing bar chart with:', { contrast1, contrast2 });
+  const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
+  const annotations = [];
+  labels.forEach((label, index) => {
+    const parts = label.split(' to ');
+    const left = parts[0] || '';
+    const right = parts[1] || '';
+    // Continuum line
+    annotations.push({
+      type: 'line',
+      yMin: label,
+      yMax: label,
+      xMin: 0,
+      xMax: 1,
+      borderColor: 'gray',
+      borderWidth: 2
+    });
+    // Left label
+    annotations.push({
+      type: 'label',
+      xValue: 0,
+      yValue: label,
+      content: left,
+      position: { x: 'start', y: 'center' },
+      xAdjust: -150,
+      yAdjust: 0,
+      backgroundColor: 'transparent',
+      color: 'black',
+      font: { size: 12 }
+    });
+    // Right label
+    annotations.push({
+      type: 'label',
+      xValue: 1,
+      yValue: label,
+      content: right,
+      position: { x: 'end', y: 'center' },
+      xAdjust: 150,
+      yAdjust: 0,
+      backgroundColor: 'transparent',
+      color: 'black',
+      font: { size: 12 }
+    });
+  });
+
+  // Initialize the chart with explicit context check
+  const canvas = document.getElementById('bar-chart');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: entity1,
+            data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
+            backgroundColor: 'darkorange',
+            pointRadius: 12,
+            showLine: false
+          }, {
+            label: entity2,
+            data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
+            backgroundColor: 'green',
+            pointRadius: 12,
+            showLine: false
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          layout: {
+            padding: {
+              left: 150,
+              right: 150,
+              top: 20,
+              bottom: 20
+            }
+          },
+          scales: {
+            x: {
+              min: 0,
+              max: 1,
+              ticks: {
+                stepSize: 0.5
+              }
+            },
+            y: {
+              type: 'category',
+              labels: labels,
+              display: false,
+              reverse: true,
+              offset: true
+            }
+          },
+          plugins: {
+            legend: { position: 'top' },
+            annotation: {
+              clip: false,
+              annotations: annotations
+            }
+          }
+        }
+      });
+    } else {
+      console.error('Failed to get 2D context for bar-chart');
+    }
+  } else {
+    console.error('Canvas element with id "bar-chart" not found');
+  }
+} else {
+  console.log('No contrast data for:', { entity1, entity2 });
+}
         new Chart(document.getElementById('bar-chart'), {
           type: 'line',
           data: {
