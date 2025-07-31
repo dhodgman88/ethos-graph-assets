@@ -365,6 +365,8 @@
           });
         });
 
+	console.log('Initializing bar chart for:', { entity1, entity2, contrast1, contrast2 });
+	      
         new Chart(document.getElementById('bar-chart'), {
           type: 'line',
           data: {
