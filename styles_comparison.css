@@ -86,7 +86,7 @@
   margin-bottom: 10px;
 }
 
-#chart svg {
+svg {
   width: 450px !important;
   height: 400px !important;
   overflow: visible !important;
