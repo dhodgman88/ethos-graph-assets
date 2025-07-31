@@ -14,6 +14,7 @@ fetch(`${apiUrl}?sheet=Entities`)
   .then(result => {
     console.log('Fetch result for Entities:', result);
     if (result.success) {
+      // Filter rows where ModelGroup (4th column) is "Primary"
       const primaryEntities = result.rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
       entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
       entityToId = primaryEntities.reduce((acc, row) => {
@@ -23,7 +24,7 @@ fetch(`${apiUrl}?sheet=Entities`)
         }
         return acc;
       }, {});
-      console.log('Raw rows from Entities:', result.rows);
+      console.log('Raw rows from Entities:', result.rows); // Debug raw data
       console.log('Filtered Primary Entities:', entities);
       console.log('Entity to ID mapping:', entityToId);
       if (Object.keys(entityToId).length === 0) {
@@ -38,7 +39,7 @@ fetch(`${apiUrl}?sheet=Entities`)
   .finally(() => {
     if (Object.keys(entityToId).length > 0) {
       dataLoaded = true;
-      updateSimilarity();
+      updateSimilarity(); // Initial similarity update
     }
   });
 
@@ -49,13 +50,28 @@ Promise.all([
   fetch(`${apiUrl}?sheet=RawScorePivot`).then(r => r.json())
 ]).then(([rollup, contrast, rawPivot]) => {
   console.log('Promise.all result:', { rollup, contrast, rawPivot });
-  if (rollup.success) rollupData = rollup.rows;
-  if (contrast.success) contrastData = contrast.rows;
-  if (rawPivot.success) rawPivotData = rawPivot.rows;
+  if (rollup.success) {
+    rollupData = rollup.rows;
+    console.log('RollUpScores rows:', rollupData);
+  } else {
+    console.error('Error fetching RollUpScores:', rollup.error);
+  }
+  if (contrast.success) {
+    contrastData = contrast.rows;
+    console.log('ContrastScores rows:', contrastData);
+  } else {
+    console.error('Error fetching ContrastScores:', contrast.error);
+  }
+  if (rawPivot.success) {
+    rawPivotData = rawPivot.rows;
+    console.log('RawScorePivot rows:', rawPivotData);
+  } else {
+    console.error('Error fetching RawScorePivot:', rawPivot.error);
+  }
 }).catch(error => console.error('Promise.all error:', error))
   .finally(() => {
     dataLoaded = true;
-    updateSimilarity();
+    updateSimilarity(); // Update similarity after data load
   });
 
 function populateDropdowns() {
@@ -87,7 +103,8 @@ function updateSimilarity() {
     if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
       const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
       const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-      let numerator = 0, denominator = 0;
+      let numerator = 0;
+      let denominator = 0;
       for (let i = 0; i < dims1.length; i++) {
         const absC = Math.abs(dims1[i]);
         const absD = Math.abs(dims2[i]);
@@ -103,6 +120,7 @@ function updateSimilarity() {
       } else {
         const similarity = 1 - (numerator / denominator);
         d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
+        console.log('Similarity calculated (fallback) for', entity1, 'and', entity2, ':', similarity);
       }
     } else {
       console.warn('Fallback failed: RawPivotData missing or duplicate EntIDs:', { raw1, raw2 });
@@ -116,22 +134,28 @@ function updateSimilarity() {
   if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
     const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
     const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-    let numerator = 0, denominator = 0;
+    console.log('Dims1:', dims1);
+    console.log('Dims2:', dims2);
+    let numerator = 0;
+    let denominator = 0;
     for (let i = 0; i < dims1.length; i++) {
       const absC = Math.abs(dims1[i]);
       const absD = Math.abs(dims2[i]);
       const absSum = absC + absD;
+      console.log(`Pair ${i}: absC=${absC}, absD=${absD}, absSum=${absSum}, diff=${Math.abs(dims1[i] - dims2[i])}`);
       if (absSum > 0) {
         numerator += Math.abs(dims1[i] - dims2[i]) / absSum;
         denominator += 1;
       }
     }
+    console.log('Numerator:', numerator, 'Denominator:', denominator);
     if (denominator === 0) {
       console.warn('No valid dimension pairs for similarity calculation');
       d3.select('#similarity-score').text('Similarity Score: N/A');
     } else {
       const similarity = 1 - (numerator / denominator);
       d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
+      console.log('Similarity calculated for', entity1, 'and', entity2, ':', similarity);
     }
   } else {
     console.warn('Invalid or duplicate EntIDs:', entId1, entId2, 'Raw1:', raw1, 'Raw2:', raw2);
@@ -140,7 +164,7 @@ function updateSimilarity() {
 }
 
 function updateCharts() {
-  updateSimilarity();
+  updateSimilarity(); // Ensure similarity updates with chart
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
   if (!entity1 || !entity2) {
@@ -151,13 +175,16 @@ function updateCharts() {
 
   const width = 450;
   const height = 400;
-  const radialScale = d3.scaleLinear().domain([0, 1]).range([0, 112.5]);
+  const radialScale = d3.scaleLinear()
+    .domain([0, 1])
+    .range([0, 112.5]);
 
   const ticks = [0, 0.25, 0.5, 0.75, 1];
+
   const centerX = width / 2;
   const centerY = height / 2;
 
-  let svg = d3.select('#chart svg'); // Reverted to #chart
+  let svg = d3.select('#chart svg');
   if (!svg.node()) {
     svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
     console.log('Created new SVG in #chart');
@@ -165,8 +192,9 @@ function updateCharts() {
     svg.selectAll('*').remove();
     svg.attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
   }
-  console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG
+  console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG creation
 
+  // Draw concentric circles for levels
   svg.selectAll("circle")
     .data(ticks)
     .join("circle")
@@ -176,6 +204,7 @@ function updateCharts() {
     .attr("stroke", "gray")
     .attr("r", d => radialScale(d));
 
+  // Function to convert angle and value to coordinates
   function angleToCoordinate(angle, value) {
     let mappedValue = Math.max(0, Math.min(1, value));
     const x = Math.cos(angle) * radialScale(mappedValue);
@@ -189,18 +218,28 @@ function updateCharts() {
     return;
   }
 
-  const features = Object.keys(data[0]).filter(key => key.trim().toLowerCase() !== 'entid' && key.trim().toLowerCase() !== 'entity name');
-  console.log('Features (axes):', features);
+  // Derive features (axes) from the first row's keys, skipping 'EntID' and 'Entity Name'
+  const features = Object.keys(data[0]).filter(key => {
+    const trimmedKey = key.trim().toLowerCase();
+    return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
+  });
+  console.log('Features (axes):', features); // Debug to confirm exclusion
 
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-    const radius = radialScale(1);
-    const labelRadius = radius * 3.5; // Increased for more space
+    const radius = radialScale(1); // 112.5px based on current scale
+    const labelRadius = radius * 3.5 + 20; // Increased for more space with offset
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
-    return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
+    return {
+      "name": f,
+      "angle": angle,
+      "line_coord": angleToCoordinate(angle, 1),
+      "label_coord": { x: labelX, y: labelY }
+    };
   });
 
+  // Draw axis lines
   svg.selectAll("line")
     .data(featureData)
     .join("line")
@@ -210,6 +249,7 @@ function updateCharts() {
     .attr("y2", d => d.line_coord.y)
     .attr("stroke", "black");
 
+  // Draw axis labels
   svg.selectAll(".axislabel")
     .data(featureData)
     .join("text")
@@ -237,19 +277,26 @@ function updateCharts() {
         .text(w => w);
     });
 
-  const line = d3.line().x(d => d.x).y(d => d.y);
+  // Line generator for paths
+  const line = d3.line()
+    .x(d => d.x)
+    .y(d => d.y);
+
+  // Expanded colors
   const colors = ["darkorange", "green"];
 
+  // Function to get coordinates for a data point's path
   function getPathCoordinates(data_point) {
     const coordinates = [];
     features.forEach((ft_name, i) => {
       const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
       coordinates.push(angleToCoordinate(angle, data_point[ft_name]));
     });
-    coordinates.push(coordinates[0]);
+    coordinates.push(coordinates[0]); // Close the path
     return coordinates;
   }
 
+  // Draw all paths
   svg.selectAll("path")
     .data(data)
     .join("path")
@@ -264,11 +311,14 @@ function updateCharts() {
     .style("display", "");
 
   const labelsDiv = d3.select("#entity-labels");
-  labelsDiv.selectAll("*").remove();
+  labelsDiv.selectAll("*").remove(); // Clear existing labels
   data.forEach((d, i) => {
-    labelsDiv.append("span").style("color", colors[i % colors.length]).text(d['Entity Name']);
+    labelsDiv.append("span")
+      .style("color", colors[i % colors.length])
+      .text(d['Entity Name']);
   });
 
+  // Continuum Chart (ContrastScores)
   let barChart = Chart.getChart('bar-chart');
   if (barChart) barChart.destroy();
   const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
@@ -281,41 +331,103 @@ function updateCharts() {
       const parts = label.split(' to ');
       const left = parts[0] || '';
       const right = parts[1] || '';
-      annotations.push({ type: 'line', yMin: label, yMax: label, xMin: 0, xMax: 1, borderColor: 'gray', borderWidth: 2 });
-      annotations.push({ type: 'label', xValue: 0, yValue: label, content: left, position: { x: 'start', y: 'center' }, xAdjust: -150, yAdjust: 0, backgroundColor: 'transparent', color: 'black', font: { size: 12 } });
-      annotations.push({ type: 'label', xValue: 1, yValue: label, content: right, position: { x: 'end', y: 'center' }, xAdjust: 150, yAdjust: 0, backgroundColor: 'transparent', color: 'black', font: { size: 12 } });
+      annotations.push({
+        type: 'line',
+        yMin: label,
+        yMax: label,
+        xMin: 0,
+        xMax: 1,
+        borderColor: 'gray',
+        borderWidth: 2
+      });
+      annotations.push({
+        type: 'label',
+        xValue: 0,
+        yValue: label,
+        content: left,
+        position: { x: 'start', y: 'center' },
+        xAdjust: -150,
+        yAdjust: 0,
+        backgroundColor: 'transparent',
+        color: 'black',
+        font: { size: 12 }
+      });
+      annotations.push({
+        type: 'label',
+        xValue: 1,
+        yValue: label,
+        content: right,
+        position: { x: 'end', y: 'center' },
+        xAdjust: 150,
+        yAdjust: 0,
+        backgroundColor: 'transparent',
+        color: 'black',
+        font: { size: 12 }
+      });
     });
 
-    const canvas = document.getElementById('bar-chart');
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{ label: entity1, data: labels.map(label => ({ x: contrast1[label] || 0, y: label })), backgroundColor: 'darkorange', pointRadius: 12, showLine: false }, { label: entity2, data: labels.map(label => ({ x: contrast2[label] || 0, y: label })), backgroundColor: 'green', pointRadius: 12, showLine: false }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            layout: { padding: { left: 150, right: 150, top: 20, bottom: 20 } },
-            scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels: labels, display: false, reverse: true, offset: true } },
-            plugins: { legend: { position: 'top' }, annotation: { clip: false, annotations: annotations } }
+    new Chart(document.getElementById('bar-chart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: entity1,
+          data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
+          backgroundColor: 'darkorange',
+          pointRadius: 12,
+          showLine: false
+        }, {
+          label: entity2,
+          data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
+          backgroundColor: 'green',
+          pointRadius: 12,
+          showLine: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        layout: {
+          padding: {
+            left: 150,
+            right: 150,
+            top: 20,
+            bottom: 20
           }
-        });
-      } else {
-        console.error('Failed to get 2D context for bar-chart');
+        },
+        scales: {
+          x: {
+            min: 0,
+            max: 1,
+            ticks: {
+              stepSize: 0.5
+            }
+          },
+          y: {
+            type: 'category',
+            labels: labels,
+            display: false,
+            reverse: true,
+            offset: true
+          }
+        },
+        plugins: {
+          legend: { position: 'top' },
+          annotation: {
+            clip: false,
+            annotations: annotations
+          }
+        }
       }
-    } else {
-      console.error('Canvas element with id "bar-chart" not found');
-    }
+    });
   }
 }
 
+// Event listeners
 d3.select('#entity-select1').on('change', () => { updateCharts(); updateSimilarity(); });
 d3.select('#entity-select2').on('change', () => { updateCharts(); updateSimilarity(); });
 
+// Initial update
 updateCharts();
 updateSimilarity();
