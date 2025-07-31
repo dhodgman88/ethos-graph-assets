@@ -14,7 +14,6 @@ fetch(`${apiUrl}?sheet=Entities`)
   .then(result => {
     console.log('Fetch result for Entities:', result);
     if (result.success) {
-      // Filter rows where ModelGroup (4th column) is "Primary"
       const primaryEntities = result.rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
       entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
       entityToId = primaryEntities.reduce((acc, row) => {
@@ -24,7 +23,7 @@ fetch(`${apiUrl}?sheet=Entities`)
         }
         return acc;
       }, {});
-      console.log('Raw rows from Entities:', result.rows); // Debug raw data
+      console.log('Raw rows from Entities:', result.rows);
       console.log('Filtered Primary Entities:', entities);
       console.log('Entity to ID mapping:', entityToId);
       if (Object.keys(entityToId).length === 0) {
@@ -39,7 +38,7 @@ fetch(`${apiUrl}?sheet=Entities`)
   .finally(() => {
     if (Object.keys(entityToId).length > 0) {
       dataLoaded = true;
-      updateSimilarity(); // Initial similarity update
+      updateSimilarity();
     }
   });
 
@@ -50,28 +49,13 @@ Promise.all([
   fetch(`${apiUrl}?sheet=RawScorePivot`).then(r => r.json())
 ]).then(([rollup, contrast, rawPivot]) => {
   console.log('Promise.all result:', { rollup, contrast, rawPivot });
-  if (rollup.success) {
-    rollupData = rollup.rows;
-    console.log('RollUpScores rows:', rollupData);
-  } else {
-    console.error('Error fetching RollUpScores:', rollup.error);
-  }
-  if (contrast.success) {
-    contrastData = contrast.rows;
-    console.log('ContrastScores rows:', contrastData);
-  } else {
-    console.error('Error fetching ContrastScores:', contrast.error);
-  }
-  if (rawPivot.success) {
-    rawPivotData = rawPivot.rows;
-    console.log('RawScorePivot rows:', rawPivotData);
-  } else {
-    console.error('Error fetching RawScorePivot:', rawPivot.error);
-  }
+  if (rollup.success) rollupData = rollup.rows;
+  if (contrast.success) contrastData = contrast.rows;
+  if (rawPivot.success) rawPivotData = rawPivot.rows;
 }).catch(error => console.error('Promise.all error:', error))
   .finally(() => {
     dataLoaded = true;
-    updateSimilarity(); // Update similarity after data load
+    updateSimilarity();
   });
 
 function populateDropdowns() {
@@ -98,14 +82,12 @@ function updateSimilarity() {
   console.log('Mapping entities to EntIDs:', { entity1, entId1, entity2, entId2 });
   if (!entId1 || !entId2) {
     console.error('Invalid EntID mapping:', { entId1, entId2 });
-    // Fallback: Try direct lookup in RawScorePivot if Entities mapping fails
     const raw1 = rawPivotData.find(d => d['Entity Name']?.toString().trim() === entity1);
     const raw2 = rawPivotData.find(d => d['Entity Name']?.toString().trim() === entity2);
     if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
       const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
       const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-      let numerator = 0;
-      let denominator = 0;
+      let numerator = 0, denominator = 0;
       for (let i = 0; i < dims1.length; i++) {
         const absC = Math.abs(dims1[i]);
         const absD = Math.abs(dims2[i]);
@@ -121,7 +103,6 @@ function updateSimilarity() {
       } else {
         const similarity = 1 - (numerator / denominator);
         d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
-        console.log('Similarity calculated (fallback) for', entity1, 'and', entity2, ':', similarity);
       }
     } else {
       console.warn('Fallback failed: RawPivotData missing or duplicate EntIDs:', { raw1, raw2 });
@@ -135,28 +116,22 @@ function updateSimilarity() {
   if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
     const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
     const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-    console.log('Dims1:', dims1);
-    console.log('Dims2:', dims2);
-    let numerator = 0;
-    let denominator = 0;
+    let numerator = 0, denominator = 0;
     for (let i = 0; i < dims1.length; i++) {
       const absC = Math.abs(dims1[i]);
       const absD = Math.abs(dims2[i]);
       const absSum = absC + absD;
-      console.log(`Pair ${i}: absC=${absC}, absD=${absD}, absSum=${absSum}, diff=${Math.abs(dims1[i] - dims2[i])}`);
       if (absSum > 0) {
         numerator += Math.abs(dims1[i] - dims2[i]) / absSum;
         denominator += 1;
       }
     }
-    console.log('Numerator:', numerator, 'Denominator:', denominator);
     if (denominator === 0) {
       console.warn('No valid dimension pairs for similarity calculation');
       d3.select('#similarity-score').text('Similarity Score: N/A');
     } else {
       const similarity = 1 - (numerator / denominator);
       d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
-      console.log('Similarity calculated for', entity1, 'and', entity2, ':', similarity);
     }
   } else {
     console.warn('Invalid or duplicate EntIDs:', entId1, entId2, 'Raw1:', raw1, 'Raw2:', raw2);
@@ -182,15 +157,15 @@ function updateCharts() {
   const centerX = width / 2;
   const centerY = height / 2;
 
-  let svg = d3.select('#radar-chart svg');
+  let svg = d3.select('#chart svg'); // Reverted to #chart
   if (!svg.node()) {
-    svg = d3.select('#radar-chart').append('svg').attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
-    console.log('Created new SVG in #radar-chart');
+    svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
+    console.log('Created new SVG in #chart');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
+    svg.attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
   }
-  console.log('Rendering radar in:', svg.node());
+  console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG
 
   svg.selectAll("circle")
     .data(ticks)
@@ -220,7 +195,7 @@ function updateCharts() {
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
     const radius = radialScale(1);
-    const labelRadius = radius * 3.5;
+    const labelRadius = radius * 3.5; // Increased for more space
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
     return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
@@ -247,7 +222,7 @@ function updateCharts() {
       if (dx > 40) return "end";
       return "middle";
     })
-    .style("font-size", "10px") // Reduce to 10px to fit better
+    .style("font-size", "10px")
     .style("dominant-baseline", "middle")
     .style("white-space", "normal")
     .each(function(d) {
