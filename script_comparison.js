@@ -228,9 +228,10 @@ function updateCharts() {
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
     const radius = radialScale(1); // 112.5px based on current scale
-    const labelRadius = radius * 3.5 + 20; // Increased for more space with offset
+    const labelRadius = radius * 4.0 + 20; // Increased for more space with offset
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
+    console.log(`Label ${f}: x=${labelX}, y=${labelY}, radius=${labelRadius}`); // Debug label positions
     return {
       "name": f,
       "angle": angle,
