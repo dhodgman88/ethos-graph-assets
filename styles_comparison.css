@@ -32,15 +32,15 @@
 }
 
 #radar-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 0;
-  flex: 1;
-  min-width: 300px;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-height: 0 !important;
+  flex: 1 !important;
+  min-width: 300px !important;
+  width: 100% !important;
+  position: relative !important;
+  overflow: visible !important;
 }
 
 #radar-section h3 {
@@ -65,13 +65,13 @@
 }
 
 #radar-section #chart {
-  padding: 60px;
-  overflow: visible;
-  width: 700px;
-  margin: 0 auto;
-  position: relative;
-  flex: 1;
-  min-width: 0;
+  padding: 60px !important;
+  overflow: visible !important;
+  width: 700px !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  flex: 1 !important;
+  min-width: 0 !important;
 }
 
 #bar-section {
@@ -86,9 +86,9 @@
 }
 
 svg {
-  width: 700px;
-  height: 400px;
-  overflow: visible;
+  width: 700px !important;
+  height: 400px !important;
+  overflow: visible !important;
 }
 
 canvas {
