@@ -186,11 +186,11 @@ function updateCharts() {
 
   let svg = d3.select('#chart svg');
   if (!svg.node()) {
-    svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
+    svg = d3.select('#chart').append('svg').attr('width', 450).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
     console.log('Created new SVG in #chart');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', 450px !important').attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
+    svg.attr('width', 450 !important').attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
   }
   console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG creation
 
