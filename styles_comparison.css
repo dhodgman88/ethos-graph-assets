@@ -65,9 +65,9 @@
 }
 
 #radar-section #chart {
-  padding: 50px;
+  padding: 60px;
   overflow: visible;
-  width: 500px;
+  width: 700px;
   margin: 0 auto;
   position: relative;
   flex: 1;
@@ -78,42 +78,7 @@
   flex: 1;
   min-width: 300px;
   width: 100%;
-  height: autho;
-}
-
-#legend {
-  width: 300px;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 10px;
-  margin-top: 10px;
-  box-sizing: border-box;
-  background: #fff;
-  position: relative;
-  border-left: none;
-}
-
-#legend::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 1px;
-  background: #ccc;
-}
-
-#legend label {
-  display: block;
-  margin-bottom: 5px;
-  cursor: pointer;
-}
-
-#legend .color-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 5px;
+  height: auto;
 }
 
 #deselect-all {
@@ -121,7 +86,7 @@
 }
 
 svg {
-  width: 500px;
+  width: 700px;
   height: 400px;
   overflow: visible;
 }
@@ -145,13 +110,6 @@ canvas {
     width: 100%;
     margin-bottom: 10px;
     margin-right: 0;
-  }
-  #legend {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid #ccc;
-    height: auto;
-    max-height: 300px;
   }
   #chart svg {
     width: 100%;
