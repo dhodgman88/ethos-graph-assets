@@ -64,8 +64,8 @@
   text-align: center;
 }
 
-#radar-section #radar-chart {
-padding: 40px !important;
+#radar-section #chart {
+  padding: 40px !important;
   overflow: visible !important;
   width: 450px !important;
   margin: 0 auto !important;
@@ -86,11 +86,16 @@ padding: 40px !important;
   margin-bottom: 10px;
 }
 
-#radar-section #radar-chart svg {
-width: 450px !important;
+#chart svg {
+  width: 450px !important;
   height: 400px !important;
   overflow: visible !important;
   clip-path: none !important;
+}
+
+.axislabel {
+  font-size: 10px !important;
+  white-space: normal !important;
 }
 
 canvas {
@@ -113,7 +118,7 @@ canvas {
     margin-bottom: 10px;
     margin-right: 0;
   }
-  #radar-chart svg {
+  #chart svg {
     width: 100%;
     height: auto;
   }
