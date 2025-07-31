@@ -165,7 +165,7 @@ function updateSimilarity() {
 }
 
 function updateCharts() {
-  updateSimilarity(); // Ensure similarity updates with chart
+  updateSimilarity();
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
   if (!entity1 || !entity2) {
@@ -174,29 +174,24 @@ function updateCharts() {
 
   console.log('Updating charts for:', entity1, entity2);
 
-  // Radar Chart (RollUpScores)
   const width = 450;
   const height = 400;
-  const radialScale = d3.scaleLinear()
-    .domain([0, 1])
-    .range([0, 112.5]); // Reduced from 175px to 2/3 (approx. 112.5px)
+  const radialScale = d3.scaleLinear().domain([0, 1]).range([0, 112.5]);
 
   const ticks = [0, 0.25, 0.5, 0.75, 1];
-
   const centerX = width / 2;
   const centerY = height / 2;
 
   let svg = d3.select('#chart svg');
   if (!svg.node()) {
     svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible');
-    console.log('Created new SVG in #chart with visible overflow');
+    console.log('Created new SVG in #chart');
   } else {
     svg.selectAll('*').remove();
     svg.attr('width', width).attr('height', height).style('overflow', 'visible');
   }
   console.log('Rendering radar in:', svg.node());
 
-  // Draw concentric circles for levels
   svg.selectAll("circle")
     .data(ticks)
     .join("circle")
@@ -206,7 +201,6 @@ function updateCharts() {
     .attr("stroke", "gray")
     .attr("r", d => radialScale(d));
 
-  // Function to convert angle and value to coordinates
   function angleToCoordinate(angle, value) {
     let mappedValue = Math.max(0, Math.min(1, value));
     const x = Math.cos(angle) * radialScale(mappedValue);
@@ -220,28 +214,18 @@ function updateCharts() {
     return;
   }
 
-  // Derive features (axes) from the first row's keys, skipping 'EntID' and 'Entity Name'
-  const features = Object.keys(data[0]).filter(key => {
-    const trimmedKey = key.trim().toLowerCase();
-    return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
-  });
+  const features = Object.keys(data[0]).filter(key => key.trim().toLowerCase() !== 'entid' && key.trim().toLowerCase() !== 'entity name');
   console.log('Features (axes):', features);
 
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-    const radius = radialScale(1); // Approx. 112.5px
-    const labelRadius = radius * 2.0; // Reduced proportionally to 2.0 (was 2.5 with larger scale)
+    const radius = radialScale(1);
+    const labelRadius = radius * 2.5 + 20; // Add 20px manual offset
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
-    return {
-      "name": f,
-      "angle": angle,
-      "line_coord": angleToCoordinate(angle, 1),
-      "label_coord": { x: labelX, y: labelY }
-    };
+    return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
   });
 
-  // Draw axis lines
   svg.selectAll("line")
     .data(featureData)
     .join("line")
@@ -251,7 +235,6 @@ function updateCharts() {
     .attr("y2", d => d.line_coord.y)
     .attr("stroke", "black");
 
-  // Draw axis labels
   svg.selectAll(".axislabel")
     .data(featureData)
     .join("text")
@@ -260,9 +243,7 @@ function updateCharts() {
     .attr("y", d => d.label_coord.y)
     .attr("text-anchor", d => {
       const dx = d.label_coord.x - centerX;
-      if (dx < -30) return "start";
-      if (dx > 30) return "end";
-      return "middle";
+      return dx < -40 ? "start" : dx > 40 ? "end" : "middle";
     })
     .style("font-size", "12px")
     .style("dominant-baseline", "middle")
@@ -279,26 +260,19 @@ function updateCharts() {
         .text(w => w);
     });
 
-  // Line generator for paths
-  const line = d3.line()
-    .x(d => d.x)
-    .y(d => d.y);
-
-  // Expanded colors
+  const line = d3.line().x(d => d.x).y(d => d.y);
   const colors = ["darkorange", "green"];
 
-  // Function to get coordinates for a data point's path
   function getPathCoordinates(data_point) {
     const coordinates = [];
     features.forEach((ft_name, i) => {
       const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
       coordinates.push(angleToCoordinate(angle, data_point[ft_name]));
     });
-    coordinates.push(coordinates[0]); // Close the path
+    coordinates.push(coordinates[0]);
     return coordinates;
   }
 
-  // Draw all paths
   svg.selectAll("path")
     .data(data)
     .join("path")
@@ -313,14 +287,11 @@ function updateCharts() {
     .style("display", "");
 
   const labelsDiv = d3.select("#entity-labels");
-  labelsDiv.selectAll("*").remove(); // Clear existing labels
+  labelsDiv.selectAll("*").remove();
   data.forEach((d, i) => {
-    labelsDiv.append("span")
-      .style("color", colors[i % colors.length])
-      .text(d['Entity Name']);
+    labelsDiv.append("span").style("color", colors[i % colors.length]).text(d['Entity Name']);
   });
 
-  // Continuum Chart (ContrastScores)
   let barChart = Chart.getChart('bar-chart');
   if (barChart) barChart.destroy();
   const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
@@ -333,42 +304,9 @@ function updateCharts() {
       const parts = label.split(' to ');
       const left = parts[0] || '';
       const right = parts[1] || '';
-      // Continuum line
-      annotations.push({
-        type: 'line',
-        yMin: label,
-        yMax: label,
-        xMin: 0,
-        xMax: 1,
-        borderColor: 'gray',
-        borderWidth: 2
-      });
-      // Left label
-      annotations.push({
-        type: 'label',
-        xValue: 0,
-        yValue: label,
-        content: left,
-        position: { x: 'start', y: 'center' },
-        xAdjust: -150,
-        yAdjust: 0,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
-      });
-      // Right label
-      annotations.push({
-        type: 'label',
-        xValue: 1,
-        yValue: label,
-        content: right,
-        position: { x: 'end', y: 'center' },
-        xAdjust: 150,
-        yAdjust: 0,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
-      });
+      annotations.push({ type: 'line', yMin: label, yMax: label, xMin: 0, xMax: 1, borderColor: 'gray', borderWidth: 2 });
+      annotations.push({ type: 'label', xValue: 0, yValue: label, content: left, position: { x: 'start', y: 'center' }, xAdjust: -150, yAdjust: 0, backgroundColor: 'transparent', color: 'black', font: { size: 12 } });
+      annotations.push({ type: 'label', xValue: 1, yValue: label, content: right, position: { x: 'end', y: 'center' }, xAdjust: 150, yAdjust: 0, backgroundColor: 'transparent', color: 'black', font: { size: 12 } });
     });
 
     const canvas = document.getElementById('bar-chart');
@@ -379,55 +317,15 @@ function updateCharts() {
           type: 'line',
           data: {
             labels: labels,
-            datasets: [{
-              label: entity1,
-              data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
-              backgroundColor: 'darkorange',
-              pointRadius: 12,
-              showLine: false
-            }, {
-              label: entity2,
-              data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
-              backgroundColor: 'green',
-              pointRadius: 12,
-              showLine: false
-            }]
+            datasets: [{ label: entity1, data: labels.map(label => ({ x: contrast1[label] || 0, y: label })), backgroundColor: 'darkorange', pointRadius: 12, showLine: false }, { label: entity2, data: labels.map(label => ({ x: contrast2[label] || 0, y: label })), backgroundColor: 'green', pointRadius: 12, showLine: false }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
             indexAxis: 'y',
-            layout: {
-              padding: {
-                left: 150,
-                right: 150,
-                top: 20,
-                bottom: 20
-              }
-            },
-            scales: {
-              x: {
-                min: 0,
-                max: 1,
-                ticks: {
-                  stepSize: 0.5
-                }
-              },
-              y: {
-                type: 'category',
-                labels: labels,
-                display: false,
-                reverse: true,
-                offset: true
-              }
-            },
-            plugins: {
-              legend: { position: 'top' },
-              annotation: {
-                clip: false,
-                annotations: annotations
-              }
-            }
+            layout: { padding: { left: 150, right: 150, top: 20, bottom: 20 } },
+            scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels: labels, display: false, reverse: true, offset: true } },
+            plugins: { legend: { position: 'top' }, annotation: { clip: false, annotations: annotations } }
           }
         });
       } else {
@@ -439,10 +337,8 @@ function updateCharts() {
   }
 }
 
-// Event listeners
 d3.select('#entity-select1').on('change', () => { updateCharts(); updateSimilarity(); });
 d3.select('#entity-select2').on('change', () => { updateCharts(); updateSimilarity(); });
 
-// Initial update
 updateCharts();
 updateSimilarity();
