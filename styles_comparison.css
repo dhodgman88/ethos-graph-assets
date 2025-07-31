@@ -65,13 +65,13 @@
 }
 
 #radar-section #chart {
-  padding: 40px;
-  overflow: visible;
-  width: 450px;
-  margin: 0 auto;
-  position: relative;
-  flex: 1;
-  min-width: 0;
+padding: 40px !important;
+  overflow: visible !important;
+  width: 450px !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  flex: 1 !important;
+  min-width: 0 !important;
 }
 
 #bar-section {
@@ -85,10 +85,10 @@
   margin-bottom: 10px;
 }
 
-svg {
-  width: 450px;
-  height: 400px;
-  overflow: visible;
+#radar-section #chart svg {
+  width: 450px !important;
+  height: 400px !important;
+  overflow: visible !important;
 }
 
 canvas {
