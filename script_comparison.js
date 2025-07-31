@@ -168,9 +168,16 @@
       updateSimilarity(); // Ensure similarity updates with chart
       const entity1 = d3.select('#entity-select1').property('value');
       const entity2 = d3.select('#entity-select2').property('value');
-      const svg = d3.select('#chart svg');
-      svg.selectAll('*').remove();
-      svg.attr('width', 300).attr('height', 400);
+      let svg = d3.select('#chart svg');
+      if (!svg.node()) {
+        svg = d3.select('#chart').append('svg').attr('width', 300).attr('height', 400);
+        console.log('Created new SVG in #chart');
+      } else {
+        svg.selectAll('*').remove();
+        svg.attr('width', 300).attr('height', 400);
+      }
+      console.log('Rendering radar in:', svg.node()); // Debug log
+
       const legendDiv = d3.select('#legend');
       legendDiv.selectAll('*').remove();
 
