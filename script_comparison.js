@@ -244,7 +244,7 @@ svg.selectAll(".axislabel")
     if (dx > 50) return "end"; // Increased threshold for right
     return "middle";
   })
-  .style("font-size", "10px") // Reduced to 10px
+  .style("font-size", "10px !important")
   .style("dominant-baseline", "middle")
   .style("white-space", "normal") // Allow wrapping
   .each(function(d) {
