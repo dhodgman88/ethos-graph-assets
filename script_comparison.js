@@ -223,60 +223,41 @@ function updateCharts() {
     const trimmedKey = key.trim().toLowerCase();
     return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
   });
-  console.log('Features (axes):', features); // Debug to confirm exclusion
+const featureData = features.map((f, i) => {
+  const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
+  const radius = radialScale(1); // 112.5px
+  const labelRadius = radius * 4.0 + 30; // Increased to 480px to exceed effective width
+  const labelX = centerX + Math.cos(angle) * labelRadius;
+  const labelY = centerY - Math.sin(angle) * labelRadius;
+  return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
+});
 
-  const featureData = features.map((f, i) => {
-    const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-    const radius = radialScale(1); // 112.5px based on current scale
-    const labelRadius = radius * 4.0 + 20; // Increased for more space with offset
-    const labelX = centerX + Math.cos(angle) * labelRadius;
-    const labelY = centerY - Math.sin(angle) * labelRadius;
-    console.log(`Label ${f}: x=${labelX}, y=${labelY}, radius=${labelRadius}`); // Debug label positions
-    return {
-      "name": f,
-      "angle": angle,
-      "line_coord": angleToCoordinate(angle, 1),
-      "label_coord": { x: labelX, y: labelY }
-    };
+svg.selectAll(".axislabel")
+  .data(featureData)
+  .join("text")
+  .attr("class", "axislabel")
+  .attr("x", d => d.label_coord.x)
+  .attr("y", d => d.label_coord.y)
+  .attr("text-anchor", d => {
+    const dx = d.label_coord.x - centerX;
+    if (dx < -50) return "start"; // Increased threshold for left
+    if (dx > 50) return "end"; // Increased threshold for right
+    return "middle";
+  })
+  .style("font-size", "10px") // Reduced to 10px
+  .style("dominant-baseline", "middle")
+  .style("white-space", "normal") // Allow wrapping
+  .each(function(d) {
+    const words = d.name.split(/(?=[A-Z])/);
+    d3.select(this).selectAll("tspan").remove();
+    d3.select(this).selectAll("tspan")
+      .data(words)
+      .enter().append("tspan")
+      .attr("x", d.label_coord.x)
+      .attr("dy", (w, i) => i ? "1.2em" : 0)
+      .attr("text-anchor", "middle")
+      .text(w => w);
   });
-
-  // Draw axis lines
-  svg.selectAll("line")
-    .data(featureData)
-    .join("line")
-    .attr("x1", centerX)
-    .attr("y1", centerY)
-    .attr("x2", d => d.line_coord.x)
-    .attr("y2", d => d.line_coord.y)
-    .attr("stroke", "black");
-
-  // Draw axis labels
-  svg.selectAll(".axislabel")
-    .data(featureData)
-    .join("text")
-    .attr("class", "axislabel")
-    .attr("x", d => d.label_coord.x)
-    .attr("y", d => d.label_coord.y)
-    .attr("text-anchor", d => {
-      const dx = d.label_coord.x - centerX;
-      if (dx < -40) return "start";
-      if (dx > 40) return "end";
-      return "middle";
-    })
-    .style("font-size", "10px")
-    .style("dominant-baseline", "middle")
-    .style("white-space", "normal")
-    .each(function(d) {
-      const words = d.name.split(/(?=[A-Z])/);
-      d3.select(this).selectAll("tspan").remove();
-      d3.select(this).selectAll("tspan")
-        .data(words)
-        .enter().append("tspan")
-        .attr("x", d.label_coord.x)
-        .attr("dy", (w, i) => i ? "1.2em" : 0)
-        .attr("text-anchor", "middle")
-        .text(w => w);
-    });
 
   // Line generator for paths
   const line = d3.line()
