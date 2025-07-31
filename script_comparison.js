@@ -190,7 +190,7 @@ function updateCharts() {
     console.log('Created new SVG in #chart');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', width).attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
+    svg.attr('width', 450px !important').attr('height', height).style('overflow', 'visible').style('clip-path', 'none');
   }
   console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG creation
 
