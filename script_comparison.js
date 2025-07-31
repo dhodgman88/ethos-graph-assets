@@ -321,6 +321,7 @@
       const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
       const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
       if (contrast1 && contrast2) {
+	console.log('Initializing bar chart with:', { contrast1, contrast2 });	      
         const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
         const annotations = [];
         labels.forEach((label, index) => {
@@ -363,10 +364,7 @@
             color: 'black',
             font: { size: 12 }
           });
-        });
-
-	console.log('Initializing bar chart for:', { entity1, entity2, contrast1, contrast2 });
-	      
+        });   
         new Chart(document.getElementById('bar-chart'), {
           type: 'line',
           data: {
