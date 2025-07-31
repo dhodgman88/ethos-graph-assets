@@ -88,6 +88,7 @@
   box-sizing: border-box; /* Include padding in width */
   background: #fff; /* Optional: Visualize content bounds */
   position: relative; /* Contain pseudo-element */
+  border-left: 1px solid #ccc;
 }
 
 #legend label {
