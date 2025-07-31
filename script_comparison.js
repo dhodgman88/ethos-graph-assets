@@ -174,7 +174,7 @@
         console.log('Created new SVG in #chart');
       } else {
         svg.selectAll('*').remove();
-        svg.attr('width', 300).attr('height', 400);
+        svg.attr('width', 300).attr('height', 400).style('overflow', 'visible');
       }
       console.log('Rendering radar in:', svg.node()); // Debug log
 
@@ -233,7 +233,7 @@
       const featureData = features.map((f, i) => {
         const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
         const radius = radialScale(1); // 125px based on current scale
-  	const labelRadius = radius * 1.2; // 20% beyond the outer edge (150px)
+  	const labelRadius = radius * 1.5; 
  	const labelX = centerX + Math.cos(angle) * labelRadius;
   	const labelY = centerY - Math.sin(angle) * labelRadius; // Subtract to match SVG y-axis (top-down)
         return {
