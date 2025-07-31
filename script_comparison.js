@@ -182,10 +182,10 @@ function updateCharts() {
   const centerX = width / 2;
   const centerY = height / 2;
 
-  let svg = d3.select('#chart svg');
+  let svg = d3.select('#radar-chart svg');
   if (!svg.node()) {
-    svg = d3.select('#chart').append('svg').attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
-    console.log('Created new SVG in #chart');
+    svg = d3.select('#radar-chart').append('svg').attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
+    console.log('Created new SVG in #radar-chart');
   } else {
     svg.selectAll('*').remove();
     svg.attr('width', 450).attr('height', 400).style('overflow', 'visible').style('clip-path', 'none');
