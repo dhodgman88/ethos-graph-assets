@@ -40,7 +40,7 @@
   min-width: 300px;
   width: 100%;
   position: relative;
-  overflow: hidden; /* Added to contain any overflow, including legend border */
+  overflow: hidden;
 }
 
 #radar-section h3 {
@@ -80,8 +80,25 @@
 }
 
 #legend {
-  /* ... existing styles ... */
-  border-left: none; /* Test without border */
+  width: 300px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 10px;
+  margin-top: 10px;
+  box-sizing: border-box;
+  background: #fff;
+  position: relative;
+  border-left: none;
+}
+
+#legend::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: #ccc;
 }
 
 #legend label {
