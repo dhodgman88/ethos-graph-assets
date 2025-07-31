@@ -65,9 +65,9 @@
 }
 
 #radar-section #chart {
-  padding: 40px;
+  padding: 50px;
   overflow: visible;
-  width: 400px;
+  width: 500px;
   margin: 0 auto;
   position: relative;
   flex: 1;
@@ -121,7 +121,7 @@
 }
 
 svg {
-  width: 400px;
+  width: 500px;
   height: 400px;
   overflow: visible;
 }
