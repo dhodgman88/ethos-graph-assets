@@ -40,6 +40,7 @@
   min-width: 300px;
   width: 100%;
   position: relative;
+  overflow: hidden; /* Added to contain any overflow, including legend border */
 }
 
 #radar-section h3 {
@@ -69,8 +70,8 @@
   width: 300px;
   margin: 0 auto;
   position: relative;
-  flex: 1; /* Consolidated from separate #chart selector */
-  min-width: 0; /* Consolidated from separate #chart selector */
+  flex: 1;
+  min-width: 0;
 }
 
 #bar-section {
@@ -80,13 +81,13 @@
 
 #legend {
   width: 300px;
-  max-height: 400px;
+  max-height: 300px; /* Reduced from 400px to minimize vertical space */
   overflow-y: auto;
   padding: 10px;
-  border-left: 1px solid #ccc;
-  margin-top: 20px;
-  box-sizing: border-box;
-  background: #fff;
+  margin-top: 10px; /* Reduced from 20px for tighter layout */
+  box-sizing: border-box; /* Include padding in width */
+  background: #fff; /* Optional: Visualize content bounds */
+  position: relative; /* Contain pseudo-element */
 }
 
 #legend label {
@@ -136,7 +137,7 @@ canvas {
     border-left: none;
     border-top: 1px solid #ccc;
     height: auto;
-    max-height: 400px;
+    max-height: 300px;
   }
   #chart svg {
     width: 100%;
