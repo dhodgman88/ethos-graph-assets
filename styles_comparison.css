@@ -91,6 +91,7 @@ svg {
   height: 400px !important;
   overflow: visible !important;
   clip-path: none !important;
+  margin: 20px;
 }
 
 .axislabel {
