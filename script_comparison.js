@@ -175,11 +175,11 @@ function updateCharts() {
   console.log('Updating charts for:', entity1, entity2);
 
   // Radar Chart (RollUpScores)
-  const width = 700;
+  const width = 450;
   const height = 400;
   const radialScale = d3.scaleLinear()
     .domain([0, 1])
-    .range([0, 175]); // Adjusted range for larger width
+    .range([0, 112.5]); // Reduced from 175px to 2/3 (approx. 112.5px)
 
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
@@ -188,11 +188,11 @@ function updateCharts() {
 
   let svg = d3.select('#chart svg');
   if (!svg.node()) {
-    svg = d3.select('#chart').append('svg').attr('width', 700).attr('height', 400).style('overflow', 'visible');
+    svg = d3.select('#chart').append('svg').attr('width', width).attr('height', height).style('overflow', 'visible');
     console.log('Created new SVG in #chart with visible overflow');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', 700).attr('height', 400).style('overflow', 'visible');
+    svg.attr('width', width).attr('height', height).style('overflow', 'visible');
   }
   console.log('Rendering radar in:', svg.node());
 
@@ -225,12 +225,12 @@ function updateCharts() {
     const trimmedKey = key.trim().toLowerCase();
     return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
   });
-  console.log('Features (axes):', features); // Debug to confirm exclusion
+  console.log('Features (axes):', features);
 
   const featureData = features.map((f, i) => {
     const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-    const radius = radialScale(1); // Adjusted based on new scale
-    const labelRadius = radius * 3; // Increased for more label space
+    const radius = radialScale(1); // Approx. 112.5px
+    const labelRadius = radius * 2.0; // Reduced proportionally to 2.0 (was 2.5 with larger scale)
     const labelX = centerX + Math.cos(angle) * labelRadius;
     const labelY = centerY - Math.sin(angle) * labelRadius;
     return {
@@ -260,13 +260,13 @@ function updateCharts() {
     .attr("y", d => d.label_coord.y)
     .attr("text-anchor", d => {
       const dx = d.label_coord.x - centerX;
-      if (dx < -20) return "start";
-      if (dx > 20) return "end";
+      if (dx < -30) return "start";
+      if (dx > 30) return "end";
       return "middle";
     })
-    .attr("x", d => d.label_coord.x)
-    .attr("y", d => d.label_coord.y)
+    .style("font-size", "12px")
     .style("dominant-baseline", "middle")
+    .style("white-space", "normal")
     .each(function(d) {
       const words = d.name.split(/(?=[A-Z])/);
       d3.select(this).selectAll("tspan").remove();
