@@ -170,6 +170,7 @@
       const entity2 = d3.select('#entity-select2').property('value');
       const svg = d3.select('#chart svg');
       svg.selectAll('*').remove();
+      svg.attr('width', 300).attr('height', 400);
       const legendDiv = d3.select('#legend');
       legendDiv.selectAll('*').remove();
 
