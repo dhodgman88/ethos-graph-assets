@@ -113,7 +113,7 @@ canvas {
     margin-bottom: 10px;
     margin-right: 0;
   }
-  #radar-section #radar-chart svg {
+  #radar-chart svg {
     width: 100%;
     height: auto;
   }
