@@ -61,7 +61,7 @@
 
 #radar-section #entity-labels span {
   display: inline-block;
-  text-align: center;
+  text-align: left;
 }
 
 #radar-section #chart {
@@ -76,7 +76,7 @@
 
 #bar-section {
   flex: 1;
-  min-width: 300px;
+  min-width: 450px;
   width: 100%;
   height: auto;
 }
