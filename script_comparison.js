@@ -236,7 +236,7 @@ function updateCharts() {
 const featureData = features.map((f, i) => {
   const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
   const radius = radialScale(1); // 112.5px
-  const labelRadius = radius * 4.0 + 30; // Increased to 480px to exceed effective width
+  const labelRadius = radius * 3.0 + 10;
   const labelX = centerX + Math.cos(angle) * labelRadius;
   const labelY = centerY - Math.sin(angle) * labelRadius;
   return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
