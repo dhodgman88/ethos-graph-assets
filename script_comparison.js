@@ -124,6 +124,22 @@ function populateDropdownsFromRows(rows) {
   updateSimilarity();
   updateCharts();
 }
+function renderEntityDetails(entityName, containerId) {
+  const entityRow = entities.find(e => e['Entity Name'] === entityName);
+  const container = document.getElementById(containerId);
+  if (!entityRow || !container) return;
+
+  container.innerHTML += `
+    <div class="entity-block">
+      <h3 class="entity-name">${entityName}</h3>
+      <div class="entity-type">${entityRow['Entity Type'] || ''}</div>
+      <p class="entity-description">${entityRow['Brief Description'] || 'No description available.'}</p>
+      <p class="entity-source-notes">
+        <strong>Notes on Scoring Source:</strong> ${entityRow['ScoreSourceNotes'] || 'N/A'}
+      </p>
+    </div>
+  `;
+}
 function updateSimilarity() {
   if (!dataLoaded) {
     console.log('Data not yet loaded, skipping similarity update');
@@ -274,6 +290,11 @@ function updateCharts() {
       .style('color', colors[i])
       .text(d['Entity Name']);
   });
+  const detailDiv = document.getElementById('entity-details');
+  if (detailDiv) detailDiv.innerHTML = ''; // Clear previous content
+  renderEntityDetails(entity1, 'entity-details');
+  renderEntityDetails(entity2, 'entity-details');
+
 }
   // Contrast Bar Chart Rendering
   const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
