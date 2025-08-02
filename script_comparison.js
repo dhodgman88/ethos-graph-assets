@@ -188,7 +188,12 @@ function updateCharts() {
 
   const width = 450;
   const height = 400;
-  const radialScale = d3.scaleLinear().domain([0, 1]).range([0, 112.5]);
+  const radialScale = d3.scaleLinear()
+    .domain([0, 1])
+    .range([0, 112.5]);
+
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  
   const centerX = width / 2;
   const centerY = height / 2;
 
@@ -198,13 +203,19 @@ function updateCharts() {
       .attr('width', '100%')
       .attr('height', 'auto')
       .attr('viewBox', `0 0 ${width} ${height}`)
-      .style('overflow', 'hidden'); // Clip overflow to contain labels
+      .style('overflow', 'visible')
+      .style('clip-path', 'none');
+    console.log('Created new responsive SVG in #chart');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('viewBox', `0 0 ${width} ${height}`);
+    svg.attr('width', '100%')
+      .attr('height', 'auto')
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio', 'xMinYMid meet')
+      .style('overflow', 'visible')
+      .style('clip-path', 'none');
   }
 
-  const ticks = [0, 0.25, 0.5, 0.75, 1];
   svg.selectAll('circle')
     .data(ticks)
     .join('circle')
@@ -214,28 +225,34 @@ function updateCharts() {
     .attr('stroke', 'gray')
     .attr('r', d => radialScale(d));
 
+  // Function to convert angle and value to coordinates
   function angleToCoordinate(angle, value) {
-    const r = Math.min(radialScale(value), 112.5); // Cap radius to prevent overextension
-    const x = Math.cos(angle) * r;
-    const y = Math.sin(angle) * r;
-    return { x: centerX + x, y: centerY - y };
+    let mappedValue = Math.max(0, Math.min(1, value));
+    const x = Math.cos(angle) * radialScale(mappedValue);
+    const y = Math.sin(angle) * radialScale(mappedValue);
+    return { "x": centerX + x, "y": centerY - y };
   }
 
   const data = [rollupData.find(d => d['Entity Name'] === entity1), rollupData.find(d => d['Entity Name'] === entity2)].filter(d => d);
-  if (!data.length) return;
+  if (!data.length) {
+    console.error('No rollup data for:', entity1, entity2);
+    return;
+  }
 
-  const features = Object.keys(data[0]).filter(k => k !== 'EntID' && k !== 'Entity Name');
-
-  const featureData = features.map((f, i) => {
-    const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
-    const labelRadius = Math.min(radialScale(1) * 1.1, 120); // Adjusted to fit within viewBox
-    return {
-      name: f,
-      angle,
-      line_coord: angleToCoordinate(angle, 1),
-      label_coord: angleToCoordinate(angle, 1) // Use same radius as chart edge, adjust below if needed
-    };
+  // Derive features (axes) from the first row's keys, skipping 'EntID' and 'Entity Name'
+  const features = Object.keys(data[0]).filter(key => {
+    const trimmedKey = key.trim().toLowerCase();
+    return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
   });
+const featureData = features.map((f, i) => {
+  const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
+  const radius = radialScale(1); // 112.5px
+  const labelRadius = radius * 3.0 + 10;
+  const labelX = centerX + Math.cos(angle) * labelRadius;
+  const labelY = centerY - Math.sin(angle) * labelRadius;
+  return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
+});
+
 
   svg.selectAll('.axislabel')
     .data(featureData)
@@ -265,27 +282,34 @@ function updateCharts() {
   const line = d3.line().x(d => d.x).y(d => d.y);
   const colors = ['darkorange', 'green'];
 
-  function getPathCoordinates(d) {
-    return features.map((f, i) => {
-      const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
-      return angleToCoordinate(angle, d[f]);
-    }).concat(angleToCoordinate(Math.PI / 2, d[features[0]]));
+  function getPathCoordinates(data_point) {
+    const coordinates = [];
+    features.forEach((ft_name, i) => {
+      const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
+      coordinates.push(angleToCoordinate(angle, data_point[ft_name]));
+    });
+    coordinates.push(coordinates[0]); // Close the path
+    return coordinates;
   }
 
-  svg.selectAll('path')
+  svg.selectAll("path")
     .data(data)
-    .join('path')
-    .attr('d', d => line(getPathCoordinates(d)))
-    .attr('stroke-width', 3)
-    .attr('stroke', (_, i) => colors[i])
-    .attr('fill', (_, i) => colors[i])
-    .attr('fill-opacity', 0.1);
+    .join("path")
+    .attr("class", (_, i) => `series series-${i}`)
+    .datum(d => getPathCoordinates(d))
+    .attr("d", line)
+    .attr("stroke-width", 3)
+    .attr("stroke", (_, i) => colors[i % colors.length])
+    .attr("fill", (_, i) => colors[i % colors.length])
+    .attr("stroke-opacity", 1)
+    .attr("fill-opacity", 0.1)
+    .style("display", "");
 
-  const labelsDiv = d3.select('#entity-labels');
-  labelsDiv.selectAll('*').remove();
+  const labelsDiv = d3.select("#entity-labels");
+  labelsDiv.selectAll("*").remove(); // Clear existing labels
   data.forEach((d, i) => {
-    labelsDiv.append('span')
-      .style('color', colors[i])
+    labelsDiv.append("span")
+      .style("color", colors[i % colors.length])
       .text(d['Entity Name']);
   });
   const detailDiv = document.getElementById('entity-details');
