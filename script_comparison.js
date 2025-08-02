@@ -14,7 +14,6 @@ fetch(`${apiUrl}?sheet=Entities`)
   .then(result => {
     console.log('Fetch result for Entities:', result);
     if (result.success) {
-      // Filter rows where ModelGroup (4th column) is "Primary"
       const primaryEntities = result.rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
       entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
       entityToId = primaryEntities.reduce((acc, row) => {
@@ -24,7 +23,7 @@ fetch(`${apiUrl}?sheet=Entities`)
         }
         return acc;
       }, {});
-      console.log('Raw rows from Entities:', result.rows); // Debug raw data
+      console.log('Raw rows from Entities:', result.rows);
       console.log('Filtered Primary Entities:', entities);
       console.log('Entity to ID mapping:', entityToId);
       if (Object.keys(entityToId).length === 0) {
@@ -43,7 +42,6 @@ fetch(`${apiUrl}?sheet=Entities`)
     }
   });
 
-// Fetch data for all tabs
 Promise.all([
   fetch(`${apiUrl}?sheet=RollUpScores`).then(r => r.json()),
   fetch(`${apiUrl}?sheet=ContrastScores`).then(r => r.json()),
@@ -71,21 +69,16 @@ Promise.all([
 }).catch(error => console.error('Promise.all error:', error))
   .finally(() => {
     dataLoaded = true;
-    updateSimilarity(); // Update similarity after data load
+    updateSimilarity();
   });
-
 function populateDropdownsFromRows(rows) {
   const select1 = d3.select('#entity-select1');
   const select2 = d3.select('#entity-select2');
 
-  // Clear any existing options
   select1.selectAll('*').remove();
   select2.selectAll('*').remove();
 
-  // Filter to ModelGroup === "Primary" (safety check)
   const filtered = rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
-
-  // Group by Entity Type
   const grouped = d3.group(filtered, d => d['Entity Type'] || 'Other');
 
   function populateSelect(select) {
@@ -186,23 +179,15 @@ function updateSimilarity() {
 }
 
 function updateCharts() {
-  updateSimilarity(); // Ensure similarity updates with chart
+  updateSimilarity();
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
-  if (!entity1 || !entity2) {
-    return;
-  }
-
-  console.log('Updating charts for:', entity1, entity2);
+  if (!entity1 || !entity2) return;
 
   const width = 450;
   const height = 400;
-  const radialScale = d3.scaleLinear()
-    .domain([0, 1])
-    .range([0, 112.5]);
-
+  const radialScale = d3.scaleLinear().domain([0, 1]).range([0, 112.5]);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
-
   const centerX = width / 2;
   const centerY = height / 2;
 
@@ -214,7 +199,6 @@ function updateCharts() {
       .attr('viewBox', `0 0 ${width} ${height}`)
       .style('overflow', 'visible')
       .style('clip-path', 'none');
-    console.log('Created new responsive SVG in #chart');
   } else {
     svg.selectAll('*').remove();
     svg.attr('width', '100%')
@@ -224,9 +208,7 @@ function updateCharts() {
       .style('overflow', 'visible')
       .style('clip-path', 'none');
   }
-  console.log('Rendering radar in:', svg.node()); // Debug to confirm SVG creation
 
-  // Draw concentric circles for levels
   svg.selectAll("circle")
     .data(ticks)
     .join("circle")
@@ -236,7 +218,6 @@ function updateCharts() {
     .attr("stroke", "gray")
     .attr("r", d => radialScale(d));
 
-  // Function to convert angle and value to coordinates
   function angleToCoordinate(angle, value) {
     let mappedValue = Math.max(0, Math.min(1, value));
     const x = Math.cos(angle) * radialScale(mappedValue);
@@ -250,67 +231,62 @@ function updateCharts() {
     return;
   }
 
-  // Derive features (axes) from the first row's keys, skipping 'EntID' and 'Entity Name'
   const features = Object.keys(data[0]).filter(key => {
     const trimmedKey = key.trim().toLowerCase();
     return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
   });
-const featureData = features.map((f, i) => {
-  const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-  const radius = radialScale(1); // 112.5px
-  const labelRadius = radius * 3.0 + 10;
-  const labelX = centerX + Math.cos(angle) * labelRadius;
-  const labelY = centerY - Math.sin(angle) * labelRadius;
-  return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
-});
 
-svg.selectAll(".axislabel")
-  .data(featureData)
-  .join("text")
-  .attr("class", "axislabel")
-  .attr("x", d => d.label_coord.x)
-  .attr("y", d => d.label_coord.y)
-  .attr("text-anchor", d => {
-    const dx = d.label_coord.x - centerX;
-    if (dx < -50) return "start"; // Increased threshold for left
-    if (dx > 50) return "end"; // Increased threshold for right
-    return "middle";
-  })
-  .style("font-size", "10px !important")
-  .style("dominant-baseline", "middle")
-  .style("white-space", "normal") // Allow wrapping
-  .each(function(d) {
-    const words = d.name.split(/(?=[A-Z])/);
-    d3.select(this).selectAll("tspan").remove();
-    d3.select(this).selectAll("tspan")
-      .data(words)
-      .enter().append("tspan")
-      .attr("x", d.label_coord.x)
-      .attr("dy", (w, i) => i ? "1.2em" : 0)
-      .attr("text-anchor", "middle")
-      .text(w => w);
+  const featureData = features.map((f, i) => {
+    const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
+    const radius = radialScale(1);
+    const labelRadius = radius * 3.0 + 10;
+    const labelX = centerX + Math.cos(angle) * labelRadius;
+    const labelY = centerY - Math.sin(angle) * labelRadius;
+    return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
   });
 
-  // Line generator for paths
+  svg.selectAll(".axislabel")
+    .data(featureData)
+    .join("text")
+    .attr("class", "axislabel")
+    .attr("x", d => d.label_coord.x)
+    .attr("y", d => d.label_coord.y)
+    .attr("text-anchor", d => {
+      const dx = d.label_coord.x - centerX;
+      if (dx < -50) return "start";
+      if (dx > 50) return "end";
+      return "middle";
+    })
+    .style("font-size", "10px !important")
+    .style("dominant-baseline", "middle")
+    .style("white-space", "normal")
+    .each(function(d) {
+      const words = d.name.split(/(?=[A-Z])/);
+      d3.select(this).selectAll("tspan").remove();
+      d3.select(this).selectAll("tspan")
+        .data(words)
+        .enter().append("tspan")
+        .attr("x", d.label_coord.x)
+        .attr("dy", (w, i) => i ? "1.2em" : 0)
+        .attr("text-anchor", "middle")
+        .text(w => w);
+    });
   const line = d3.line()
     .x(d => d.x)
     .y(d => d.y);
 
-  // Expanded colors
   const colors = ["darkorange", "green"];
 
-  // Function to get coordinates for a data point's path
   function getPathCoordinates(data_point) {
     const coordinates = [];
     features.forEach((ft_name, i) => {
       const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
       coordinates.push(angleToCoordinate(angle, data_point[ft_name]));
     });
-    coordinates.push(coordinates[0]); // Close the path
+    coordinates.push(coordinates[0]);
     return coordinates;
   }
 
-  // Draw all paths
   svg.selectAll("path")
     .data(data)
     .join("path")
@@ -325,129 +301,132 @@ svg.selectAll(".axislabel")
     .style("display", "");
 
   const labelsDiv = d3.select("#entity-labels");
-  labelsDiv.selectAll("*").remove(); // Clear existing labels
+  labelsDiv.selectAll("*").remove();
   data.forEach((d, i) => {
     labelsDiv.append("span")
       .style("color", colors[i % colors.length])
       .text(d['Entity Name']);
   });
 
-  // Continuum Chart (ContrastScores)
-const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
-const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
+  const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
+  const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
 
-if (!contrast1) console.warn(`No contrast data found for ${entity1}`);
-if (!contrast2) console.warn(`No contrast data found for ${entity2}`);
+  if (!contrast1) console.warn(`No contrast data found for ${entity1}`);
+  if (!contrast2) console.warn(`No contrast data found for ${entity2}`);
 
-if (contrast1 && contrast2) {
-  const existingChart = Chart.getChart('bar-chart');
-  if (existingChart) existingChart.destroy();
+  if (contrast1 && contrast2) {
+    const existingChart = Chart.getChart('bar-chart');
+    if (existingChart) existingChart.destroy();
 
-  console.log('Initializing bar chart with:', { contrast1, contrast2 });
+    console.log('Initializing bar chart with:', { contrast1, contrast2 });
 
-  const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
-  const annotations = [];
-  labels.forEach((label, index) => {
-    const parts = label.split(' to ');
-    const left = parts[0] || '';
-    const right = parts[1] || '';
-    annotations.push({
+    const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
+    const annotations = [];
+    labels.forEach((label, index) => {
+      const parts = label.split(' to ');
+      const left = parts[0] || '';
+      const right = parts[1] || '';
+      annotations.push({
+        type: 'line',
+        yMin: label,
+        yMax: label,
+        xMin: 0,
+        xMax: 1,
+        borderColor: 'gray',
+        borderWidth: 2
+      });
+      annotations.push({
+        type: 'label',
+        xValue: 0,
+        yValue: label,
+        content: left,
+        position: { x: 'start', y: 'center' },
+        xAdjust: -150,
+        yAdjust: 0,
+        backgroundColor: 'transparent',
+        color: 'black',
+        font: { size: 12 }
+      });
+      annotations.push({
+        type: 'label',
+        xValue: 1,
+        yValue: label,
+        content: right,
+        position: { x: 'end', y: 'center' },
+        xAdjust: 150,
+        yAdjust: 0,
+        backgroundColor: 'transparent',
+        color: 'black',
+        font: { size: 12 }
+      });
+    });
+
+    new Chart(document.getElementById('bar-chart'), {
       type: 'line',
-      yMin: label,
-      yMax: label,
-      xMin: 0,
-      xMax: 1,
-      borderColor: 'gray',
-      borderWidth: 2
-    });
-    annotations.push({
-      type: 'label',
-      xValue: 0,
-      yValue: label,
-      content: left,
-      position: { x: 'start', y: 'center' },
-      xAdjust: -150,
-      yAdjust: 0,
-      backgroundColor: 'transparent',
-      color: 'black',
-      font: { size: 12 }
-    });
-    annotations.push({
-      type: 'label',
-      xValue: 1,
-      yValue: label,
-      content: right,
-      position: { x: 'end', y: 'center' },
-      xAdjust: 150,
-      yAdjust: 0,
-      backgroundColor: 'transparent',
-      color: 'black',
-      font: { size: 12 }
-    });
-  });
-
-  new Chart(document.getElementById('bar-chart'), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: entity1,
-        data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
-        backgroundColor: 'darkorange',
-        pointRadius: 12,
-        showLine: false
-      }, {
-        label: entity2,
-        data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
-        backgroundColor: 'green',
-        pointRadius: 12,
-        showLine: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
-      layout: {
-        padding: {
-          left: 150,
-          right: 150,
-          top: 20,
-          bottom: 20
-        }
+      data: {
+        labels: labels,
+        datasets: [{
+          label: entity1,
+          data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
+          backgroundColor: 'darkorange',
+          pointRadius: 12,
+          showLine: false
+        }, {
+          label: entity2,
+          data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
+          backgroundColor: 'green',
+          pointRadius: 12,
+          showLine: false
+        }]
       },
-      scales: {
-        x: {
-          min: 0,
-          max: 1,
-          ticks: {
-            stepSize: 0.5
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        layout: {
+          padding: {
+            left: 150,
+            right: 150,
+            top: 20,
+            bottom: 20
           }
         },
-        y: {
-          type: 'category',
-          labels: labels,
-          display: false,
-          reverse: true,
-          offset: true
-        }
-      },
-      plugins: {
-        legend: { position: 'top' },
-        annotation: {
-          clip: false,
-          annotations: annotations
+        scales: {
+          x: {
+            min: 0,
+            max: 1,
+            ticks: {
+              stepSize: 0.5
+            }
+          },
+          y: {
+            type: 'category',
+            labels: labels,
+            display: false,
+            reverse: true,
+            offset: true
+          }
+        },
+        plugins: {
+          legend: { position: 'top' },
+          annotation: {
+            clip: false,
+            annotations: annotations
+          }
         }
       }
-    }
-  });
+    });
+  }
 }
 
+d3.select('#entity-select1').on('change', () => {
+  updateCharts();
+  updateSimilarity();
+});
+d3.select('#entity-select2').on('change', () => {
+  updateCharts();
+  updateSimilarity();
+});
 
-// Event listeners
-d3.select('#entity-select1').on('change', () => { updateCharts(); updateSimilarity(); });
-d3.select('#entity-select2').on('change', () => { updateCharts(); updateSimilarity(); });
-
-// Initial update
 updateCharts();
 updateSimilarity();
