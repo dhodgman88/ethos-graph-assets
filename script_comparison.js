@@ -198,7 +198,7 @@ function updateCharts() {
       .attr('width', '100%')
       .attr('height', 'auto')
       .attr('viewBox', `0 0 ${width} ${height}`)
-      .style('overflow', 'visible');
+      .style('overflow', 'hidden'); // Clip overflow to contain labels
   } else {
     svg.selectAll('*').remove();
     svg.attr('viewBox', `0 0 ${width} ${height}`);
@@ -215,8 +215,9 @@ function updateCharts() {
     .attr('r', d => radialScale(d));
 
   function angleToCoordinate(angle, value) {
-    const x = Math.cos(angle) * radialScale(value);
-    const y = Math.sin(angle) * radialScale(value);
+    const r = Math.min(radialScale(value), 112.5); // Cap radius to prevent overextension
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
     return { x: centerX + x, y: centerY - y };
   }
 
@@ -227,15 +228,12 @@ function updateCharts() {
 
   const featureData = features.map((f, i) => {
     const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
-    const labelRadius = radialScale(1) * 1.2 + 5;
+    const labelRadius = Math.min(radialScale(1) * 1.1, 120); // Adjusted to fit within viewBox
     return {
       name: f,
       angle,
       line_coord: angleToCoordinate(angle, 1),
-      label_coord: {
-        x: centerX + Math.cos(angle) * labelRadius,
-        y: centerY - Math.sin(angle) * labelRadius
-      }
+      label_coord: angleToCoordinate(angle, 1) // Use same radius as chart edge, adjust below if needed
     };
   });
 
@@ -295,115 +293,49 @@ function updateCharts() {
   renderEntityDetails(entity1, 'entity-details');
   renderEntityDetails(entity2, 'entity-details');
 
-// Contrast Bar Chart Rendering
-const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
-const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
+  // Contrast Bar Chart Rendering (unchanged for now)
+  const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
+  const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
 
-if (!contrast1) console.warn(`No contrast data found for ${entity1}`);
-if (!contrast2) console.warn(`No contrast data found for ${entity2}`);
+  if (!contrast1) console.warn(`No contrast data found for ${entity1}`);
+  if (!contrast2) console.warn(`No contrast data found for ${entity2}`);
 
-if (contrast1 && contrast2) {
-  const existingChart = Chart.getChart('bar-chart');
-  if (existingChart) existingChart.destroy();
+  if (contrast1 && contrast2) {
+    const existingChart = Chart.getChart('bar-chart');
+    if (existingChart) existingChart.destroy();
 
-  const labels = Object.keys(contrast1).filter(k => k !== 'EntID' && k !== 'Entity Name');
-  const annotations = [];
+    const labels = Object.keys(contrast1).filter(k => k !== 'EntID' && k !== 'Entity Name');
+    const annotations = [];
 
-  labels.forEach(label => {
-    const [left, right] = label.split(' to ');
-    annotations.push(
-      {
-        type: 'line',
-        yMin: label,
-        yMax: label,
-        borderColor: 'gray',
-        borderWidth: 2
+    labels.forEach(label => {
+      const [left, right] = label.split(' to ');
+      annotations.push(
+        { type: 'line', yMin: label, yMax: label, borderColor: 'gray', borderWidth: 2 },
+        { type: 'label', xValue: 0, yValue: label, content: left || '', position: { x: 'start', y: 'center' }, xAdjust: -150, backgroundColor: 'transparent', color: 'black', font: { size: 12 } },
+        { type: 'label', xValue: 1, yValue: label, content: right || '', position: { x: 'end', y: 'center' }, xAdjust: 150, backgroundColor: 'transparent', color: 'black', font: { size: 12 } }
+      );
+    });
+
+    new Chart(document.getElementById('bar-chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: entity1, data: labels.map(label => ({ x: contrast1[label] || 0, y: label })), backgroundColor: 'darkorange', pointRadius: 12, showLine: false },
+          { label: entity2, data: labels.map(label => ({ x: contrast2[label] || 0, y: label })), backgroundColor: 'green', pointRadius: 12, showLine: false }
+        ]
       },
-      {
-        type: 'label',
-        xValue: 0,
-        yValue: label,
-        content: left || '',
-        position: { x: 'start', y: 'center' },
-        xAdjust: -150,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
-      },
-      {
-        type: 'label',
-        xValue: 1,
-        yValue: label,
-        content: right || '',
-        position: { x: 'end', y: 'center' },
-        xAdjust: 150,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        layout: { padding: { left: 150, right: 150, top: 20, bottom: 20 } },
+        scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels, display: false, reverse: true, offset: true } },
+        plugins: { legend: { position: 'top' }, annotation: { clip: false, annotations } }
       }
-    );
-  });
-
-  new Chart(document.getElementById('bar-chart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: entity1,
-          data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
-          backgroundColor: 'darkorange',
-          pointRadius: 12,
-          showLine: false
-        },
-        {
-          label: entity2,
-          data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
-          backgroundColor: 'green',
-          pointRadius: 12,
-          showLine: false
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
-      layout: {
-        padding: {
-          left: 150,
-          right: 150,
-          top: 20,
-          bottom: 20
-        }
-      },
-      scales: {
-        x: {
-          min: 0,
-          max: 1,
-          ticks: {
-            stepSize: 0.5
-          }
-        },
-        y: {
-          type: 'category',
-          labels,
-          display: false,
-          reverse: true,
-          offset: true
-        }
-      },
-      plugins: {
-        legend: { position: 'top' },
-        annotation: {
-          clip: false,
-          annotations
-        }
-      }
-    }
-  });
+    });
+  }
 }
-} // ← Final closing brace for updateCharts now correctly placed here
 
 // Event Listeners for dropdowns
 d3.select('#entity-select1').on('change', () => {
