@@ -19,6 +19,11 @@
   border: 1px solid #ccc;
 }
 
+optgroup {
+  font-weight: bold;
+  font-style: italic;
+}
+
 #similarity-score {
   font-size: 1.5em;
   font-weight: bold;
