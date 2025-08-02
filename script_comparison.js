@@ -1,76 +1,95 @@
 const apiUrl = 'https://script.google.com/macros/s/AKfycbyRS9sMWDZHsX9Y0Oft_NrOghlKzK1lAVgb5L_W1fKYdPDclcyqOFhqWplreWPSRO3LMQ/exec';
 
 let entities = [];
-let entityToId = {}; // Map Entity Name to EntID
+let entityToId = {};
 let rollupData = [];
 let contrastData = [];
 let rawPivotData = [];
-let dataLoaded = false; // Flag to track data readiness
+let dataLoaded = false;
 
-// Fetch entity names and create EntID mapping, filtering for ModelGroup = "Primary"
-console.log('Fetching entities from:', `${apiUrl}?sheet=Entities`);
-fetch(`${apiUrl}?sheet=Entities`)
-  .then(response => response.json())
-  .then(result => {
-    console.log('Fetch result for Entities:', result);
-    if (result.success) {
-      const primaryEntities = result.rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
-      entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
-      entityToId = primaryEntities.reduce((acc, row) => {
-        const idKeys = ['EntID', 'ent_id', 'ID'].find(key => row[key] !== undefined);
-        if (idKeys && row['Entity Name'] !== undefined) {
-          acc[row['Entity Name'].toString().trim()] = parseInt(row[idKeys].toString().trim());
-        }
-        return acc;
-      }, {});
-      console.log('Raw rows from Entities:', result.rows);
-      console.log('Filtered Primary Entities:', entities);
-      console.log('Entity to ID mapping:', entityToId);
-      if (Object.keys(entityToId).length === 0) {
-        console.error('No valid EntID to Entity Name mappings found for ModelGroup = Primary');
+const CACHE_DURATION_MS = 60 * 60 * 1000;
+
+function getCachedSheet(sheetName) {
+  const cached = localStorage.getItem(sheetName);
+  if (!cached) return null;
+  const { timestamp, data } = JSON.parse(cached);
+  if (Date.now() - timestamp > CACHE_DURATION_MS) {
+    localStorage.removeItem(sheetName);
+    return null;
+  }
+  return data;
+}
+
+function cacheSheet(sheetName, data) {
+  localStorage.setItem(sheetName, JSON.stringify({ timestamp: Date.now(), data }));
+}
+
+function showError(message) {
+  const box = document.getElementById('error-message');
+  if (box) {
+    box.textContent = message;
+    box.style.display = 'block';
+  } else {
+    alert(message);
+  }
+}
+
+function setLoading(isLoading) {
+  const spinner = document.getElementById('loading-spinner');
+  if (spinner) spinner.style.display = isLoading ? 'block' : 'none';
+}
+
+function processEntities(rows) {
+  const primaryEntities = rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
+  entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
+  entityToId = primaryEntities.reduce((acc, row) => {
+    const idKey = ['EntID', 'ent_id', 'ID'].find(key => row[key] !== undefined);
+    if (idKey && row['Entity Name']) {
+      acc[row['Entity Name'].toString().trim()] = parseInt(row[idKey]);
+    }
+    return acc;
+  }, {});
+  populateDropdownsFromRows(primaryEntities);
+  dataLoaded = true;
+  updateSimilarity();
+}
+
+const cachedEntities = getCachedSheet('Entities');
+if (cachedEntities) {
+  processEntities(cachedEntities);
+} else {
+  setLoading(true);
+  fetch(`${apiUrl}?sheet=Entities`)
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        cacheSheet('Entities', result.rows);
+        processEntities(result.rows);
+      } else {
+        showError('Error fetching entities: ' + result.error);
       }
-      populateDropdownsFromRows(primaryEntities);
-    } else {
-      console.error('Error fetching entities:', result.error);
-    }
-  })
-  .catch(error => console.error('Fetch error for Entities:', error))
-  .finally(() => {
-    if (Object.keys(entityToId).length > 0) {
-      dataLoaded = true;
-      updateSimilarity(); // Initial similarity update
-    }
-  });
+    })
+    .catch(error => showError('Fetch error for Entities: ' + error))
+    .finally(() => setLoading(false));
+}
 
 Promise.all([
   fetch(`${apiUrl}?sheet=RollUpScores`).then(r => r.json()),
   fetch(`${apiUrl}?sheet=ContrastScores`).then(r => r.json()),
   fetch(`${apiUrl}?sheet=RawScorePivot`).then(r => r.json())
-]).then(([rollup, contrast, rawPivot]) => {
-  console.log('Promise.all result:', { rollup, contrast, rawPivot });
-  if (rollup.success) {
-    rollupData = rollup.rows;
-    console.log('RollUpScores rows:', rollupData);
-  } else {
-    console.error('Error fetching RollUpScores:', rollup.error);
-  }
-  if (contrast.success) {
-    contrastData = contrast.rows;
-    console.log('ContrastScores rows:', contrastData);
-  } else {
-    console.error('Error fetching ContrastScores:', contrast.error);
-  }
-  if (rawPivot.success) {
-    rawPivotData = rawPivot.rows;
-    console.log('RawScorePivot rows:', rawPivotData);
-  } else {
-    console.error('Error fetching RawScorePivot:', rawPivot.error);
-  }
-}).catch(error => console.error('Promise.all error:', error))
+])
+  .then(([rollup, contrast, rawPivot]) => {
+    if (rollup.success) rollupData = rollup.rows;
+    if (contrast.success) contrastData = contrast.rows;
+    if (rawPivot.success) rawPivotData = rawPivot.rows;
+  })
+  .catch(error => showError('Error loading chart data: ' + error))
   .finally(() => {
     dataLoaded = true;
     updateSimilarity();
+    updateCharts();
   });
+
 function populateDropdownsFromRows(rows) {
   const select1 = d3.select('#entity-select1');
   const select2 = d3.select('#entity-select2');
@@ -95,91 +114,58 @@ function populateDropdownsFromRows(rows) {
 
   populateSelect(select1);
   populateSelect(select2);
-}
 
+  const firstGroup = Array.from(grouped.values())[0];
+  if (firstGroup && firstGroup.length > 1) {
+    if (!select1.property('value')) select1.property('value', firstGroup[0]['Entity Name']);
+    if (!select2.property('value')) select2.property('value', firstGroup[1]['Entity Name']);
+  }
+
+  updateSimilarity();
+  updateCharts();
+}
 function updateSimilarity() {
   if (!dataLoaded) {
     console.log('Data not yet loaded, skipping similarity update');
     return;
   }
+
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
   if (!entity1 || !entity2) {
     d3.select('#similarity-score').text('Similarity Score: N/A');
     return;
   }
+
   const entId1 = entityToId[entity1];
   const entId2 = entityToId[entity2];
-  console.log('Mapping entities to EntIDs:', { entity1, entId1, entity2, entId2 });
-  if (!entId1 || !entId2) {
-    console.error('Invalid EntID mapping:', { entId1, entId2 });
-    const raw1 = rawPivotData.find(d => d['Entity Name']?.toString().trim() === entity1);
-    const raw2 = rawPivotData.find(d => d['Entity Name']?.toString().trim() === entity2);
-    if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
-      const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
-      const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-      let numerator = 0;
-      let denominator = 0;
-      for (let i = 0; i < dims1.length; i++) {
-        const absC = Math.abs(dims1[i]);
-        const absD = Math.abs(dims2[i]);
-        const absSum = absC + absD;
-        if (absSum > 0) {
-          numerator += Math.abs(dims1[i] - dims2[i]) / absSum;
-          denominator += 1;
-        }
-      }
-      if (denominator === 0) {
-        console.warn('No valid dimension pairs for similarity calculation');
-        d3.select('#similarity-score').text('Similarity Score: N/A');
-      } else {
-        const similarity = 1 - (numerator / denominator);
-        d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
-        console.log('Similarity calculated (fallback) for', entity1, 'and', entity2, ':', similarity);
-      }
-    } else {
-      console.warn('Fallback failed: RawPivotData missing or duplicate EntIDs:', { raw1, raw2 });
-      d3.select('#similarity-score').text('Similarity Score: N/A');
-    }
-    return;
-  }
+
   const raw1 = rawPivotData.find(d => d['EntID'] === entId1);
   const raw2 = rawPivotData.find(d => d['EntID'] === entId2);
-  console.log('Raw data found:', { raw1, raw2 });
+
   if (raw1 && raw2 && raw1['EntID'] !== raw2['EntID']) {
-    const dims1 = Object.keys(raw1).filter(key => key.startsWith('Dim')).map(key => raw1[key]);
-    const dims2 = Object.keys(raw2).filter(key => key.startsWith('Dim')).map(key => raw2[key]);
-    console.log('Dims1:', dims1);
-    console.log('Dims2:', dims2);
-    let numerator = 0;
-    let denominator = 0;
+    const dims1 = Object.keys(raw1).filter(k => k.startsWith('Dim')).map(k => raw1[k]);
+    const dims2 = Object.keys(raw2).filter(k => k.startsWith('Dim')).map(k => raw2[k]);
+
+    let numerator = 0, denominator = 0;
     for (let i = 0; i < dims1.length; i++) {
-      const absC = Math.abs(dims1[i]);
-      const absD = Math.abs(dims2[i]);
-      const absSum = absC + absD;
-      console.log(`Pair ${i}: absC=${absC}, absD=${absD}, absSum=${absSum}, diff=${Math.abs(dims1[i] - dims2[i])}`);
+      const absSum = Math.abs(dims1[i]) + Math.abs(dims2[i]);
       if (absSum > 0) {
         numerator += Math.abs(dims1[i] - dims2[i]) / absSum;
-        denominator += 1;
+        denominator++;
       }
     }
-    console.log('Numerator:', numerator, 'Denominator:', denominator);
-    if (denominator === 0) {
-      console.warn('No valid dimension pairs for similarity calculation');
-      d3.select('#similarity-score').text('Similarity Score: N/A');
-    } else {
-      const similarity = 1 - (numerator / denominator);
-      d3.select('#similarity-score').text(`Similarity Score: ${similarity.toFixed(2)}`);
-      console.log('Similarity calculated for', entity1, 'and', entity2, ':', similarity);
-    }
+
+    const similarity = denominator > 0 ? 1 - (numerator / denominator) : null;
+    d3.select('#similarity-score').text(
+      similarity !== null ? `Similarity Score: ${similarity.toFixed(2)}` : 'Similarity Score: N/A'
+    );
   } else {
-    console.warn('Invalid or duplicate EntIDs:', entId1, entId2, 'Raw1:', raw1, 'Raw2:', raw2);
     d3.select('#similarity-score').text('Similarity Score: N/A');
   }
 }
 
 function updateCharts() {
-  updateSimilarity();
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
   if (!entity1 || !entity2) return;
@@ -187,7 +173,6 @@ function updateCharts() {
   const width = 450;
   const height = 400;
   const radialScale = d3.scaleLinear().domain([0, 1]).range([0, 112.5]);
-  const ticks = [0, 0.25, 0.5, 0.75, 1];
   const centerX = width / 2;
   const centerY = height / 2;
 
@@ -197,117 +182,100 @@ function updateCharts() {
       .attr('width', '100%')
       .attr('height', 'auto')
       .attr('viewBox', `0 0 ${width} ${height}`)
-      .style('overflow', 'visible')
-      .style('clip-path', 'none');
+      .style('overflow', 'visible');
   } else {
     svg.selectAll('*').remove();
-    svg.attr('width', '100%')
-      .attr('height', 'auto')
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('preserveAspectRatio', 'xMinYMid meet')
-      .style('overflow', 'visible')
-      .style('clip-path', 'none');
+    svg.attr('viewBox', `0 0 ${width} ${height}`);
   }
 
-  svg.selectAll("circle")
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  svg.selectAll('circle')
     .data(ticks)
-    .join("circle")
-    .attr("cx", centerX)
-    .attr("cy", centerY)
-    .attr("fill", "none")
-    .attr("stroke", "gray")
-    .attr("r", d => radialScale(d));
+    .join('circle')
+    .attr('cx', centerX)
+    .attr('cy', centerY)
+    .attr('fill', 'none')
+    .attr('stroke', 'gray')
+    .attr('r', d => radialScale(d));
 
   function angleToCoordinate(angle, value) {
-    let mappedValue = Math.max(0, Math.min(1, value));
-    const x = Math.cos(angle) * radialScale(mappedValue);
-    const y = Math.sin(angle) * radialScale(mappedValue);
-    return { "x": centerX + x, "y": centerY - y };
+    const x = Math.cos(angle) * radialScale(value);
+    const y = Math.sin(angle) * radialScale(value);
+    return { x: centerX + x, y: centerY - y };
   }
 
   const data = [rollupData.find(d => d['Entity Name'] === entity1), rollupData.find(d => d['Entity Name'] === entity2)].filter(d => d);
-  if (!data.length) {
-    console.error('No rollup data for:', entity1, entity2);
-    return;
-  }
+  if (!data.length) return;
 
-  const features = Object.keys(data[0]).filter(key => {
-    const trimmedKey = key.trim().toLowerCase();
-    return trimmedKey !== 'entid' && trimmedKey !== 'entity name';
-  });
+  const features = Object.keys(data[0]).filter(k => k !== 'EntID' && k !== 'Entity Name');
 
   const featureData = features.map((f, i) => {
-    const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-    const radius = radialScale(1);
-    const labelRadius = radius * 3.0 + 10;
-    const labelX = centerX + Math.cos(angle) * labelRadius;
-    const labelY = centerY - Math.sin(angle) * labelRadius;
-    return { "name": f, "angle": angle, "line_coord": angleToCoordinate(angle, 1), "label_coord": { x: labelX, y: labelY } };
+    const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
+    const labelRadius = radialScale(1) * 3 + 10;
+    return {
+      name: f,
+      angle,
+      line_coord: angleToCoordinate(angle, 1),
+      label_coord: {
+        x: centerX + Math.cos(angle) * labelRadius,
+        y: centerY - Math.sin(angle) * labelRadius
+      }
+    };
   });
 
-  svg.selectAll(".axislabel")
+  svg.selectAll('.axislabel')
     .data(featureData)
-    .join("text")
-    .attr("class", "axislabel")
-    .attr("x", d => d.label_coord.x)
-    .attr("y", d => d.label_coord.y)
-    .attr("text-anchor", d => {
+    .join('text')
+    .attr('class', 'axislabel')
+    .attr('x', d => d.label_coord.x)
+    .attr('y', d => d.label_coord.y)
+    .attr('text-anchor', d => {
       const dx = d.label_coord.x - centerX;
-      if (dx < -50) return "start";
-      if (dx > 50) return "end";
-      return "middle";
+      return dx < -50 ? 'start' : dx > 50 ? 'end' : 'middle';
     })
-    .style("font-size", "10px !important")
-    .style("dominant-baseline", "middle")
-    .style("white-space", "normal")
+    .style('font-size', '10px')
+    .style('dominant-baseline', 'middle')
+    .style('white-space', 'normal')
     .each(function(d) {
       const words = d.name.split(/(?=[A-Z])/);
-      d3.select(this).selectAll("tspan").remove();
-      d3.select(this).selectAll("tspan")
+      d3.select(this).selectAll('tspan').remove();
+      d3.select(this).selectAll('tspan')
         .data(words)
-        .enter().append("tspan")
-        .attr("x", d.label_coord.x)
-        .attr("dy", (w, i) => i ? "1.2em" : 0)
-        .attr("text-anchor", "middle")
+        .enter().append('tspan')
+        .attr('x', d.label_coord.x)
+        .attr('dy', (w, i) => i ? '1.2em' : 0)
+        .attr('text-anchor', 'middle')
         .text(w => w);
     });
-  const line = d3.line()
-    .x(d => d.x)
-    .y(d => d.y);
 
-  const colors = ["darkorange", "green"];
+  const line = d3.line().x(d => d.x).y(d => d.y);
+  const colors = ['darkorange', 'green'];
 
-  function getPathCoordinates(data_point) {
-    const coordinates = [];
-    features.forEach((ft_name, i) => {
-      const angle = (Math.PI / 2) + (2 * Math.PI * i / features.length);
-      coordinates.push(angleToCoordinate(angle, data_point[ft_name]));
-    });
-    coordinates.push(coordinates[0]);
-    return coordinates;
+  function getPathCoordinates(d) {
+    return features.map((f, i) => {
+      const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
+      return angleToCoordinate(angle, d[f]);
+    }).concat(angleToCoordinate(Math.PI / 2, d[features[0]]));
   }
 
-  svg.selectAll("path")
+  svg.selectAll('path')
     .data(data)
-    .join("path")
-    .attr("class", (_, i) => `series series-${i}`)
-    .datum(d => getPathCoordinates(d))
-    .attr("d", line)
-    .attr("stroke-width", 3)
-    .attr("stroke", (_, i) => colors[i % colors.length])
-    .attr("fill", (_, i) => colors[i % colors.length])
-    .attr("stroke-opacity", 1)
-    .attr("fill-opacity", 0.1)
-    .style("display", "");
+    .join('path')
+    .attr('d', d => line(getPathCoordinates(d)))
+    .attr('stroke-width', 3)
+    .attr('stroke', (_, i) => colors[i])
+    .attr('fill', (_, i) => colors[i])
+    .attr('fill-opacity', 0.1);
 
-  const labelsDiv = d3.select("#entity-labels");
-  labelsDiv.selectAll("*").remove();
+  const labelsDiv = d3.select('#entity-labels');
+  labelsDiv.selectAll('*').remove();
   data.forEach((d, i) => {
-    labelsDiv.append("span")
-      .style("color", colors[i % colors.length])
+    labelsDiv.append('span')
+      .style('color', colors[i])
       .text(d['Entity Name']);
   });
-
+}
+  // Contrast Bar Chart Rendering
   const contrast1 = contrastData.find(d => d['Entity Name'] === entity1);
   const contrast2 = contrastData.find(d => d['Entity Name'] === entity2);
 
@@ -318,66 +286,64 @@ function updateCharts() {
     const existingChart = Chart.getChart('bar-chart');
     if (existingChart) existingChart.destroy();
 
-    console.log('Initializing bar chart with:', { contrast1, contrast2 });
-
-    const labels = Object.keys(contrast1).filter(key => key !== 'EntID' && key !== 'Entity Name');
+    const labels = Object.keys(contrast1).filter(k => k !== 'EntID' && k !== 'Entity Name');
     const annotations = [];
-    labels.forEach((label, index) => {
-      const parts = label.split(' to ');
-      const left = parts[0] || '';
-      const right = parts[1] || '';
-      annotations.push({
-        type: 'line',
-        yMin: label,
-        yMax: label,
-        xMin: 0,
-        xMax: 1,
-        borderColor: 'gray',
-        borderWidth: 2
-      });
-      annotations.push({
-        type: 'label',
-        xValue: 0,
-        yValue: label,
-        content: left,
-        position: { x: 'start', y: 'center' },
-        xAdjust: -150,
-        yAdjust: 0,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
-      });
-      annotations.push({
-        type: 'label',
-        xValue: 1,
-        yValue: label,
-        content: right,
-        position: { x: 'end', y: 'center' },
-        xAdjust: 150,
-        yAdjust: 0,
-        backgroundColor: 'transparent',
-        color: 'black',
-        font: { size: 12 }
-      });
+
+    labels.forEach(label => {
+      const [left, right] = label.split(' to ');
+      annotations.push(
+        {
+          type: 'line',
+          yMin: label,
+          yMax: label,
+          borderColor: 'gray',
+          borderWidth: 2
+        },
+        {
+          type: 'label',
+          xValue: 0,
+          yValue: label,
+          content: left || '',
+          position: { x: 'start', y: 'center' },
+          xAdjust: -150,
+          backgroundColor: 'transparent',
+          color: 'black',
+          font: { size: 12 }
+        },
+        {
+          type: 'label',
+          xValue: 1,
+          yValue: label,
+          content: right || '',
+          position: { x: 'end', y: 'center' },
+          xAdjust: 150,
+          backgroundColor: 'transparent',
+          color: 'black',
+          font: { size: 12 }
+        }
+      );
     });
 
     new Chart(document.getElementById('bar-chart'), {
       type: 'line',
       data: {
-        labels: labels,
-        datasets: [{
-          label: entity1,
-          data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
-          backgroundColor: 'darkorange',
-          pointRadius: 12,
-          showLine: false
-        }, {
-          label: entity2,
-          data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
-          backgroundColor: 'green',
-          pointRadius: 12,
-          showLine: false
-        }]
+        labels,
+        datasets: [
+          {
+            label: entity1,
+            data: labels.map(label => ({ x: contrast1[label] || 0, y: label })),
+            backgroundColor: 'darkorange',
+            pointRadius: 12,
+            showLine: false
+          },
+          {
+            label: entity2,
+            data: labels.map(label => ({ x: contrast2[label] || 0, y: label })),
+            backgroundColor: 'green',
+            pointRadius: 12,
+            showLine: false
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -401,7 +367,7 @@ function updateCharts() {
           },
           y: {
             type: 'category',
-            labels: labels,
+            labels,
             display: false,
             reverse: true,
             offset: true
@@ -411,7 +377,7 @@ function updateCharts() {
           legend: { position: 'top' },
           annotation: {
             clip: false,
-            annotations: annotations
+            annotations
           }
         }
       }
@@ -419,6 +385,7 @@ function updateCharts() {
   }
 }
 
+// Event Listeners for dropdowns
 d3.select('#entity-select1').on('change', () => {
   updateCharts();
   updateSimilarity();
@@ -428,5 +395,51 @@ d3.select('#entity-select2').on('change', () => {
   updateSimilarity();
 });
 
+// Initial render (if default values are loaded early enough)
 updateCharts();
 updateSimilarity();
+// Fallback in case chart containers are missing
+document.addEventListener('DOMContentLoaded', () => {
+  if (!document.getElementById('bar-chart')) {
+    console.warn('Missing #bar-chart container');
+  }
+  if (!document.getElementById('chart')) {
+    console.warn('Missing #chart container');
+  }
+  if (!document.getElementById('entity-select1') || !document.getElementById('entity-select2')) {
+    console.error('Missing dropdown elements for entity selection');
+  }
+});
+
+// Optional helper: clean up local cache manually (dev only)
+// localStorage.removeItem('Entities');
+// localStorage.removeItem('RollUpScores');
+// localStorage.removeItem('ContrastScores');
+// localStorage.removeItem('RawScorePivot');
+
+// Optional debug trigger
+window.forceReloadData = () => {
+  localStorage.clear();
+  location.reload();
+};
+
+// Optional: Show error message box if missing
+if (!document.getElementById('error-message')) {
+  const errBox = document.createElement('div');
+  errBox.id = 'error-message';
+  errBox.style.display = 'none';
+  errBox.style.color = 'red';
+  errBox.style.margin = '10px 0';
+  document.body.appendChild(errBox);
+}
+
+// Optional: Show spinner if missing
+if (!document.getElementById('loading-spinner')) {
+  const spinner = document.createElement('div');
+  spinner.id = 'loading-spinner';
+  spinner.style.display = 'none';
+  spinner.textContent = 'Loading...';
+  spinner.style.color = 'gray';
+  spinner.style.margin = '10px 0';
+  document.body.appendChild(spinner);
+}
