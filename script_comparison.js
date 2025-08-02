@@ -74,12 +74,34 @@ Promise.all([
     updateSimilarity(); // Update similarity after data load
   });
 
-function populateDropdowns() {
-  console.log('Populating dropdowns with:', entities);
+function populateDropdownsFromRows(rows) {
   const select1 = d3.select('#entity-select1');
   const select2 = d3.select('#entity-select2');
-  select1.selectAll('option').data(entities).enter().append('option').attr('value', d => d).text(d => d);
-  select2.selectAll('option').data(entities).enter().append('option').attr('value', d => d).text(d => d);
+
+  // Clear any existing options
+  select1.selectAll('*').remove();
+  select2.selectAll('*').remove();
+
+  // Filter to ModelGroup === "Primary" (safety check)
+  const filtered = rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
+
+  // Group by Entity Type
+  const grouped = d3.group(filtered, d => d['Entity Type'] || 'Other');
+
+  function populateSelect(select) {
+    for (const [type, items] of grouped) {
+      const optgroup = select.append('optgroup').attr('label', type);
+      optgroup.selectAll('option')
+        .data(items)
+        .enter()
+        .append('option')
+        .attr('value', d => d['Entity Name'])
+        .text(d => d['Entity Name']);
+    }
+  }
+
+  populateSelect(select1);
+  populateSelect(select2);
 }
 
 function updateSimilarity() {
