@@ -30,7 +30,7 @@ fetch(`${apiUrl}?sheet=Entities`)
       if (Object.keys(entityToId).length === 0) {
         console.error('No valid EntID to Entity Name mappings found for ModelGroup = Primary');
       }
-      populateDropdowns();
+      populateDropdownsFromRows(primaryEntities);
     } else {
       console.error('Error fetching entities:', result.error);
     }
