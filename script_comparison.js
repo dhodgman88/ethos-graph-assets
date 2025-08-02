@@ -227,7 +227,7 @@ function updateCharts() {
 
   const featureData = features.map((f, i) => {
     const angle = Math.PI / 2 + (2 * Math.PI * i / features.length);
-    const labelRadius = radialScale(1) * 3 + 10;
+    const labelRadius = radialScale(1) * 1.2 + 5;
     return {
       name: f,
       angle,
