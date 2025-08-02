@@ -41,7 +41,9 @@ function setLoading(isLoading) {
 
 function processEntities(rows) {
   const primaryEntities = rows.filter(row => row['ModelGroup']?.toString().trim() === 'Primary');
-  entities = [...new Set(primaryEntities.map(row => row['Entity Name']?.toString().trim()))].sort();
+  entities = primaryEntities.sort((a, b) =>
+    a['Entity Name'].localeCompare(b['Entity Name'])
+  );
   entityToId = primaryEntities.reduce((acc, row) => {
     const idKey = ['EntID', 'ent_id', 'ID'].find(key => row[key] !== undefined);
     if (idKey && row['Entity Name']) {
@@ -313,7 +315,16 @@ const featureData = features.map((f, i) => {
       .text(d['Entity Name']);
   });
   const detailDiv = document.getElementById('entity-details');
-  if (detailDiv) detailDiv.innerHTML = ''; // Clear previous content
+  if (!detailDiv) {
+    console.warn('Missing #entity-details container');
+    return;
+  }
+  detailDiv.innerHTML = ''; // Clear previous content
+  
+  if (!entities.length) {
+    console.warn('Entities not yet loaded — skipping entity details');
+    return;
+  }
   renderEntityDetails(entity1, 'entity-details');
   renderEntityDetails(entity2, 'entity-details');
 
