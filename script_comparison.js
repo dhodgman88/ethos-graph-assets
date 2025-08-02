@@ -174,7 +174,7 @@ function updateSimilarity() {
 
     const similarity = denominator > 0 ? 1 - (numerator / denominator) : null;
     d3.select('#similarity-score').text(
-      similarity !== null ? `Similarity Score: ${similarity.toFixed(2)}` : 'Similarity Score: N/A'
+      similarity !== null ? `Similarity Score: ${(similarity * 100).toFixed(0)}%` : 'Similarity Score: N/A'
     );
   } else {
     d3.select('#similarity-score').text('Similarity Score: N/A');
