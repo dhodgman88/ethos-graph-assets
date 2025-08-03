@@ -96,6 +96,33 @@ function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
   ctx.fillText(line, x, lineY);
 }
 
+Chart.register({
+  id: 'customLabelDraw',
+  beforeDraw: chart => {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'right';
+
+    const labels = chart.data.labels || [];
+    if (!chart.scales.y) return;
+
+    labels.forEach(label => {
+      const [left, right] = label.split(' to ');
+      const y = chart.scales.y.getPixelForValue(label);
+      if (y === undefined) return;
+
+      drawWrappedText(ctx, left || '', 20, y - 10, 70, 14);
+      ctx.textAlign = 'left';
+      drawWrappedText(ctx, right || '', chart.width - 20, y - 10, 70, 14);
+      ctx.textAlign = 'right';
+    });
+
+    ctx.restore();
+  }
+});
+
 Promise.all([
   fetch(`${apiUrl}?sheet=RollUpScores`).then(r => r.json()),
   fetch(`${apiUrl}?sheet=ContrastScores`).then(r => r.json()),
@@ -406,32 +433,6 @@ const featureData = features.map((f, i) => {
         plugins: {
           legend: { position: 'top' },
           annotation: { clip: false, annotations },
-          Chart.register({
-            id: 'customLabelDraw',
-            beforeDraw: chart => {
-              const ctx = chart.ctx;
-              ctx.save();
-              ctx.font = '12px sans-serif';
-              ctx.fillStyle = 'black';
-              ctx.textAlign = 'right';
-          
-              const labels = chart.data.labels || [];
-              if (!chart.scales.y) return;
-          
-              labels.forEach(label => {
-                const [left, right] = label.split(' to ');
-                const y = chart.scales.y.getPixelForValue(label);
-                if (y === undefined) return;
-          
-                drawWrappedText(ctx, left || '', 20, y - 10, 70, 14);
-                ctx.textAlign = 'left';
-                drawWrappedText(ctx, right || '', chart.width - 20, y - 10, 70, 14);
-                ctx.textAlign = 'right';
-              });
-          
-              ctx.restore();
-            }
-          });
         }
       }
     });
