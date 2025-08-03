@@ -177,15 +177,24 @@ function populateDropdownsFromRows(rows) {
   populateSelect(select1);
   populateSelect(select2);
 
-  const firstGroup = Array.from(grouped.values())[0];
-  if (firstGroup && firstGroup.length > 0) {
-    const urlEntity1 = getQueryParam('entity1')?.trim();
-    const urlEntity2 = getQueryParam('entity2')?.trim();
+  const urlEntity1 = getQueryParam('entity1')?.trim().toLowerCase();
+  const urlEntity2 = getQueryParam('entity2')?.trim().toLowerCase();
   
-    const availableNames = new Set(filtered.map(e => e['Entity Name'].trim()));
+  const availableMap = new Map(
+    filtered.map(e => [e['Entity Name'].trim().toLowerCase(), e['Entity Name']])
+  );
   
-    const firstEntity = availableNames.has(urlEntity1) ? urlEntity1 : firstGroup[0]['Entity Name'];
-    let secondEntity = availableNames.has(urlEntity2) ? urlEntity2 : firstGroup[1]?.['Entity Name'];
+  console.log('Available entities (map keys):', Array.from(availableMap.keys()));
+  console.log('URL param entity1:', urlEntity1);
+  console.log('URL param entity2:', urlEntity2);
+  
+  const firstEntity = availableMap.get(urlEntity1) || firstGroup[0]['Entity Name'];
+  let secondEntity = availableMap.get(urlEntity2) || firstGroup[1]?.['Entity Name'];
+  
+  // Prevent both dropdowns from showing the same value
+  if (firstEntity === secondEntity) {
+    secondEntity = firstGroup[2]?.['Entity Name'] || '';
+  }
   
     // Prevent both dropdowns from defaulting to the same
     if (firstEntity === secondEntity) {
