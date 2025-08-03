@@ -113,10 +113,10 @@ Chart.register({
       const y = chart.scales.y.getPixelForValue(label);
       if (y === undefined) return;
 
-      drawWrappedText(ctx, left || '', 60, y - 10, 80, 14); // LEFT label (closer to axis)
-      ctx.textAlign = 'left';
-      drawWrappedText(ctx, right || '', chart.width - 60, y - 10, 80, 14); // RIGHT label
-      ctx.textAlign = 'right';
+    drawWrappedText(ctx, left || '', 50, y - 8, 70, 13); // LEFT label
+    ctx.textAlign = 'left';
+    drawWrappedText(ctx, right || '', chart.width - 50, y - 8, 70, 13); // RIGHT label
+    ctx.textAlign = 'right';
     });
 
     ctx.restore();
