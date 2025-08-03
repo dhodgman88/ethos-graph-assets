@@ -113,9 +113,9 @@ Chart.register({
       const y = chart.scales.y.getPixelForValue(label);
       if (y === undefined) return;
 
-      drawWrappedText(ctx, left || '', 20, y - 10, 70, 14);
+      drawWrappedText(ctx, left || '', 60, y - 10, 80, 14); // LEFT label (closer to axis)
       ctx.textAlign = 'left';
-      drawWrappedText(ctx, right || '', chart.width - 20, y - 10, 70, 14);
+      drawWrappedText(ctx, right || '', chart.width - 60, y - 10, 80, 14); // RIGHT label
       ctx.textAlign = 'right';
     });
 
