@@ -104,21 +104,21 @@ Chart.register({
     ctx.font = '12px sans-serif';
     ctx.fillStyle = 'black';
     ctx.textAlign = 'right';
-
+  
     const labels = chart.data.labels || [];
     if (!chart.scales.y) return;
-
+  
     labels.forEach(label => {
       const [left, right] = label.split(' to ');
       const y = chart.scales.y.getPixelForValue(label);
       if (y === undefined) return;
-
-    drawWrappedText(ctx, left || '', 50, y - 8, 70, 13); // LEFT label
-    ctx.textAlign = 'left';
-    drawWrappedText(ctx, right || '', chart.width - 50, y - 8, 70, 13); // RIGHT label
-    ctx.textAlign = 'right';
+  
+      drawWrappedText(ctx, left || '', 60, y - 9, 75, 13); // LEFT label
+      ctx.textAlign = 'left';
+      drawWrappedText(ctx, right || '', chart.width - 60, y - 9, 75, 13); // RIGHT label
+      ctx.textAlign = 'right';
     });
-
+  
     ctx.restore();
   }
 });
