@@ -75,6 +75,27 @@ if (cachedEntities) {
     .finally(() => setLoading(false));
 }
 
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lineY = y;
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, lineY);
+      line = words[n] + ' ';
+      lineY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, lineY);
+}
+
 Promise.all([
   fetch(`${apiUrl}?sheet=RollUpScores`).then(r => r.json()),
   fetch(`${apiUrl}?sheet=ContrastScores`).then(r => r.json()),
@@ -358,28 +379,6 @@ const featureData = features.map((f, i) => {
           borderColor: 'gray',
           borderWidth: 2
         },
-        {
-          type: 'label',
-          xValue: 0,
-          yValue: label,
-          content: left,
-          position: { x: 'start', y: 'center' },
-          xAdjust: -50,  // was -150
-          backgroundColor: 'transparent',
-          color: 'black',
-          font: { size: 12, lineHeight: 1.2 }
-        },
-        {
-          type: 'label',
-          xValue: 1,
-          yValue: label,
-          content: right,
-          position: { x: 'end', y: 'center' },
-          xAdjust: 50,  // was 150
-          backgroundColor: 'transparent',
-          color: 'black',
-          font: { size: 12, lineHeight: 1.2 }
-        }
       );
     });
 
@@ -398,7 +397,29 @@ const featureData = features.map((f, i) => {
         indexAxis: 'y',
         layout: { padding: { left: 80, right: 80, top: 20, bottom: 20 } },
         scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels, display: false, reverse: true, offset: true } },
-        plugins: { legend: { position: 'top' }, annotation: { clip: false, annotations } }
+        plugins: {
+          legend: { position: 'top' },
+          annotation: { clip: false, annotations },
+          beforeDraw: chart => {
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'right';
+        
+            const labels = chart.data.labels;
+            labels.forEach(label => {
+              const [left, right] = label.split(' to ');
+              const y = chart.scales.y.getPixelForValue(label);
+              drawWrappedText(ctx, left || '', 20, y - 10, 70, 14); // LEFT label
+              ctx.textAlign = 'left';
+              drawWrappedText(ctx, right || '', chart.width - 20, y - 10, 70, 14); // RIGHT label
+              ctx.textAlign = 'right';
+            });
+        
+            ctx.restore();
+          }
+        }
       }
     });
   }
