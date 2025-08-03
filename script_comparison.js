@@ -174,8 +174,11 @@ function populateDropdownsFromRows(rows) {
 
   const firstGroup = Array.from(grouped.values())[0];
   if (firstGroup && firstGroup.length > 1) {
-    if (!select1.property('value')) select1.property('value', firstGroup[0]['Entity Name']);
-    if (!select2.property('value')) select2.property('value', firstGroup[1]['Entity Name']);
+    const firstEntity = firstGroup[0]['Entity Name'];
+    const secondEntity = firstGroup[1]['Entity Name'];
+    // Set defaults to first and second entity, ensuring they are different
+    select1.property('value', firstEntity);
+    select2.property('value', secondEntity !== firstEntity ? secondEntity : firstGroup[2]?.['Entity Name'] || '');
   }
 
   updateSimilarity();
