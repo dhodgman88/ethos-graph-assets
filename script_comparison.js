@@ -108,7 +108,7 @@ Chart.register({
     ctx.save();
     ctx.font = '12px sans-serif';
     ctx.fillStyle = 'black';
-    ctx.textAlign = 'middle';
+    ctx.textAlign = 'center';
   
     const labels = chart.data.labels || [];
     const yScale = chart.scales.y;
@@ -177,8 +177,8 @@ function populateDropdownsFromRows(rows) {
   populateSelect(select1);
   populateSelect(select2);
 
-  const urlEntity1 = getQueryParam('entity1')?.trim().toLowerCase();
-  const urlEntity2 = getQueryParam('entity2')?.trim().toLowerCase();
+  const urlEntity1 = getQueryParam('entity1')?.toLowerCase();
+  const urlEntity2 = getQueryParam('entity2')?.toLowerCase();
   
   const availableMap = new Map(
     filtered.map(e => [e['Entity Name'].trim().toLowerCase(), e['Entity Name']])
@@ -188,24 +188,22 @@ function populateDropdownsFromRows(rows) {
   console.log('URL param entity1:', urlEntity1);
   console.log('URL param entity2:', urlEntity2);
   
-  const firstEntity = availableMap.get(urlEntity1) || firstGroup[0]['Entity Name'];
-  let secondEntity = availableMap.get(urlEntity2) || firstGroup[1]?.['Entity Name'];
+  const default1 = firstGroup[0]?.['Entity Name'];
+  const default2 = firstGroup[1]?.['Entity Name'] !== default1 ? firstGroup[1]?.['Entity Name'] : firstGroup[2]?.['Entity Name'];
   
-  // Prevent both dropdowns from showing the same value
+  const firstEntity = availableMap.get(urlEntity1) || default1;
+  let secondEntity = availableMap.get(urlEntity2) || default2;
+  
+  // Prevent duplication
   if (firstEntity === secondEntity) {
-    secondEntity = firstGroup[2]?.['Entity Name'] || '';
+    secondEntity = firstGroup.find(e => e['Entity Name'] !== firstEntity)?.['Entity Name'] || '';
   }
   
-    // Prevent both dropdowns from defaulting to the same
-    if (firstEntity === secondEntity) {
-      secondEntity = firstGroup[2]?.['Entity Name'] || '';
-    }
+  select1.property('value', firstEntity);
+  select2.property('value', secondEntity);
   
-    select1.property('value', firstEntity);
-    select2.property('value', secondEntity);
-  
-    updateSimilarity();
-    updateCharts();
+  updateSimilarity();
+  updateCharts();
   }
 function renderEntityDetails(entityName, containerId) {
   const entityRow = entities.find(e => e['Entity Name'] === entityName);
@@ -504,10 +502,7 @@ d3.select('#entity-select2').on('change', () => {
   updateSimilarity();
 });
 
-// Initial render (if default values are loaded early enough)
-updateCharts();
-updateSimilarity();
-// Fallback in case chart containers are missing
+
 document.addEventListener('DOMContentLoaded', () => {
   if (!document.getElementById('bar-chart')) {
     console.warn('Missing #bar-chart container');
