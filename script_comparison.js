@@ -103,7 +103,7 @@ Chart.register({
     ctx.save();
     ctx.font = '12px sans-serif';
     ctx.fillStyle = 'black';
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'middle';
   
     const labels = chart.data.labels || [];
     const yScale = chart.scales.y;
@@ -119,11 +119,11 @@ Chart.register({
       const y = yScale.getPixelForValue(label);
       if (y === undefined) return;
   
-      // Left label: just left of the y-axis
-      drawWrappedText(ctx, left || '', axisLeft - 8, y - 9, 80, 13);
       ctx.textAlign = 'right';
+      drawWrappedText(ctx, left || '', axisLeft - 8, y - 9, 80, 13);
+      
+      ctx.textAlign = 'left'; 
       drawWrappedText(ctx, right || '', axisRight + 8, y - 9, 80, 13);
-      ctx.textAlign = 'left';
     });
   
     ctx.restore();
