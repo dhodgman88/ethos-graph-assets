@@ -188,15 +188,20 @@ function populateDropdownsFromRows(rows) {
   console.log('URL param entity1:', urlEntity1);
   console.log('URL param entity2:', urlEntity2);
   
-  const default1 = firstGroup[0]?.['Entity Name'];
-  const default2 = firstGroup[1]?.['Entity Name'] !== default1 ? firstGroup[1]?.['Entity Name'] : firstGroup[2]?.['Entity Name'];
+  // Flatten all grouped entity rows into one array
+  const allEntities = Array.from(grouped.values()).flat();
   
+  // Set safe default values
+  const default1 = allEntities[0]?.['Entity Name'] || '';
+  let default2 = allEntities.find(e => e['Entity Name'] !== default1)?.['Entity Name'] || '';
+  
+  // Check for URL params
   const firstEntity = availableMap.get(urlEntity1) || default1;
   let secondEntity = availableMap.get(urlEntity2) || default2;
   
   // Prevent duplication
   if (firstEntity === secondEntity) {
-    secondEntity = firstGroup.find(e => e['Entity Name'] !== firstEntity)?.['Entity Name'] || '';
+    secondEntity = allEntities.find(e => e['Entity Name'] !== firstEntity)?.['Entity Name'] || '';
   }
   
   select1.property('value', firstEntity);
