@@ -1,5 +1,10 @@
 const apiUrl = 'https://script.google.com/macros/s/AKfycbyRS9sMWDZHsX9Y0Oft_NrOghlKzK1lAVgb5L_W1fKYdPDclcyqOFhqWplreWPSRO3LMQ/exec';
 
+function getQueryParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+
 let entities = [];
 let entityToId = {};
 let rollupData = [];
@@ -173,14 +178,23 @@ function populateDropdownsFromRows(rows) {
   populateSelect(select2);
 
   const firstGroup = Array.from(grouped.values())[0];
-  if (firstGroup && firstGroup.length > 1) {
-    const firstEntity = firstGroup[0]['Entity Name'];
-    const secondEntity = firstGroup[1]['Entity Name'];
-    // Set defaults to first and second entity, ensuring they are different
+  if (firstGroup && firstGroup.length > 0) {
+    const urlEntity1 = getQueryParam('entity1');
+    const urlEntity2 = getQueryParam('entity2');
+  
+    const availableNames = new Set(filtered.map(e => e['Entity Name']));
+  
+    const firstEntity = availableNames.has(urlEntity1) ? urlEntity1 : firstGroup[0]['Entity Name'];
+    let secondEntity = availableNames.has(urlEntity2) ? urlEntity2 : firstGroup[1]?.['Entity Name'];
+  
+    // Prevent both dropdowns from defaulting to the same
+    if (firstEntity === secondEntity) {
+      secondEntity = firstGroup[2]?.['Entity Name'] || '';
+    }
+  
     select1.property('value', firstEntity);
-    select2.property('value', secondEntity !== firstEntity ? secondEntity : firstGroup[2]?.['Entity Name'] || '');
+    select2.property('value', secondEntity);
   }
-
   updateSimilarity();
   updateCharts();
 }
