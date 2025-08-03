@@ -127,7 +127,7 @@ Chart.register({
     });
   
     ctx.restore();
-  };
+  }
   });
 
 Promise.all([
