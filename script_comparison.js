@@ -364,22 +364,13 @@ const featureData = features.map((f, i) => {
     const annotations = [];
 
     labels.forEach(label => {
-      const [leftRaw, rightRaw] = label.split(' to ');
-
-      // Wrap each side at spaces
-      const wrapAtSpaces = str => (str || '').split(' ');
-      const left = wrapAtSpaces(leftRaw);
-      const right = wrapAtSpaces(rightRaw);
-
-      annotations.push(
-        {
-          type: 'line',
-          yMin: label,
-          yMax: label,
-          borderColor: 'gray',
-          borderWidth: 2
-        },
-      );
+      annotations.push({
+        type: 'line',
+        yMin: label,
+        yMax: label,
+        borderColor: 'gray',
+        borderWidth: 2
+      });
     });
 
     new Chart(document.getElementById('bar-chart'), {
@@ -396,7 +387,22 @@ const featureData = features.map((f, i) => {
         maintainAspectRatio: false,
         indexAxis: 'y',
         layout: { padding: { left: 80, right: 80, top: 20, bottom: 20 } },
-        scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels, display: false, reverse: true, offset: true } },
+        scales: {
+          x: { min: 0, max: 1, ticks: { stepSize: 0.5 } },
+          y: {
+            type: 'category',
+            labels,
+            display: true,
+            ticks: {
+              display: false // hide text but keep axis spacing
+            },
+            grid: {
+              drawTicks: false
+            },
+            reverse: true,
+            offset: true
+          }
+        },
         plugins: {
           legend: { position: 'top' },
           annotation: { clip: false, annotations },
