@@ -203,10 +203,10 @@ function populateDropdownsFromRows(rows) {
   
     select1.property('value', firstEntity);
     select2.property('value', secondEntity);
+  
+    updateSimilarity();
+    updateCharts();
   }
-  updateSimilarity();
-  updateCharts();
-}
 function renderEntityDetails(entityName, containerId) {
   const entityRow = entities.find(e => e['Entity Name'] === entityName);
   const container = document.getElementById(containerId);
