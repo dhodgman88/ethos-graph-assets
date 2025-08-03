@@ -232,6 +232,10 @@ function updateSimilarity() {
 }
 
 function updateCharts() {
+  if (!rollupData.length || !contrastData.length || !rawPivotData.length) {
+    console.warn('Chart data not ready, skipping update');
+    return;
+  }
   const entity1 = d3.select('#entity-select1').property('value');
   const entity2 = d3.select('#entity-select2').property('value');
   if (!entity1 || !entity2) return;
@@ -259,7 +263,7 @@ function updateCharts() {
   } else {
     svg.selectAll('*').remove();
     svg.attr('width', '100%')
-      .attr('height', 'auto')
+      .attr('height', height)
       .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('preserveAspectRatio', 'xMinYMid meet')
       .style('overflow', 'visible')
@@ -285,7 +289,7 @@ function updateCharts() {
 
   const data = [rollupData.find(d => d['Entity Name'] === entity1), rollupData.find(d => d['Entity Name'] === entity2)].filter(d => d);
   if (!data.length) {
-    console.error('No rollup data for:', entity1, entity2);
+    console.warn(`Rollup data not found for one or both entities: ${entity1}, ${entity2}`);
     return;
   }
 
@@ -413,7 +417,7 @@ const featureData = features.map((f, i) => {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
-        layout: { padding: { left: 80, right: 80, top: 20, bottom: 20 } },
+        layout: { padding: { left: 100, right: 100, top: 40, bottom: 40 } },
         scales: {
           x: { min: 0, max: 1, ticks: { stepSize: 0.5 } },
           y: {
