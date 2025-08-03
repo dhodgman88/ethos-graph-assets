@@ -346,7 +346,7 @@ const featureData = features.map((f, i) => {
       const [leftRaw, rightRaw] = label.split(' to ');
 
       // Wrap each side at spaces
-      const wrapAtSpaces = str => (str || '').split(' ').join('\n');
+      const wrapAtSpaces = str => (str || '').split(' ');
       const left = wrapAtSpaces(leftRaw);
       const right = wrapAtSpaces(rightRaw);
 
