@@ -197,6 +197,18 @@ function renderEntityDetails(entityName, containerId) {
     </div>
   `;
 }
+function renderScoreOverview(entityName, containerId) {
+  const entityRow = entities.find(e => e['Entity Name'] === entityName);
+  const container = document.getElementById(containerId);
+  if (!entityRow || !container) return;
+
+  container.innerHTML += `
+    <div class="score-overview-block">
+      <h4 class="score-overview-title">Score Overview: ${entityName}</h4>
+      <p class="score-overview-content">${entityRow['Results Overview'] || 'No summary available.'}</p>
+    </div>
+  `;
+}
 function updateSimilarity() {
   if (!dataLoaded) {
     console.log('Data not yet loaded, skipping similarity update');
@@ -373,6 +385,12 @@ const featureData = features.map((f, i) => {
       .style("color", colors[i % colors.length])
       .text(d['Entity Name']);
   });
+  const scoreOverviewDiv = document.getElementById('entity-score-overview');
+  if (scoreOverviewDiv) {
+  scoreOverviewDiv.innerHTML = ''; // Clear previous content
+  renderScoreOverview(entity1, 'entity-score-overview');
+  renderScoreOverview(entity2, 'entity-score-overview');
+  }
   const detailDiv = document.getElementById('entity-details');
   if (!detailDiv) {
     console.warn('Missing #entity-details container');
