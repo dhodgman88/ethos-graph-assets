@@ -106,22 +106,31 @@ Chart.register({
     ctx.textAlign = 'right';
   
     const labels = chart.data.labels || [];
-    if (!chart.scales.y) return;
+    const yScale = chart.scales.y;
+    const xScale = chart.scales.x;
+  
+    if (!yScale || !xScale) return;
+  
+    const axisLeft = xScale.left;
+    const axisRight = xScale.right;
   
     labels.forEach(label => {
       const [left, right] = label.split(' to ');
-      const y = chart.scales.y.getPixelForValue(label);
+      const y = yScale.getPixelForValue(label);
       if (y === undefined) return;
   
-      drawWrappedText(ctx, left || '', 60, y - 9, 75, 13); // LEFT label
+      // Left label: just left of the y-axis
+      drawWrappedText(ctx, left || '', axisLeft - 8, y - 9, 80, 13);
+  
+      // Right label: just right of the y-axis
       ctx.textAlign = 'left';
-      drawWrappedText(ctx, right || '', chart.width - 60, y - 9, 75, 13); // RIGHT label
+      drawWrappedText(ctx, right || '', axisRight + 8, y - 9, 80, 13);
       ctx.textAlign = 'right';
     });
   
     ctx.restore();
-  }
-});
+  };
+  });
 
 Promise.all([
   fetch(`${apiUrl}?sheet=RollUpScores`).then(r => r.json()),
