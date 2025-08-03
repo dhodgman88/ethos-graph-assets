@@ -121,11 +121,9 @@ Chart.register({
   
       // Left label: just left of the y-axis
       drawWrappedText(ctx, left || '', axisLeft - 8, y - 9, 80, 13);
-  
-      // Right label: just right of the y-axis
-      ctx.textAlign = 'left';
-      drawWrappedText(ctx, right || '', axisRight + 8, y - 9, 80, 13);
       ctx.textAlign = 'right';
+      drawWrappedText(ctx, right || '', axisRight + 8, y - 9, 80, 13);
+      ctx.textAlign = 'left';
     });
   
     ctx.restore();
