@@ -2,7 +2,7 @@ const apiUrl = 'https://script.google.com/macros/s/AKfycbyRS9sMWDZHsX9Y0Oft_NrOg
 
 function getQueryParam(param) {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get(param);
+  return urlParams.get(param)?.trim();
 }
 
 let entities = [];
@@ -179,10 +179,10 @@ function populateDropdownsFromRows(rows) {
 
   const firstGroup = Array.from(grouped.values())[0];
   if (firstGroup && firstGroup.length > 0) {
-    const urlEntity1 = getQueryParam('entity1');
-    const urlEntity2 = getQueryParam('entity2');
+    const urlEntity1 = getQueryParam('entity1')?.trim();
+    const urlEntity2 = getQueryParam('entity2')?.trim();
   
-    const availableNames = new Set(filtered.map(e => e['Entity Name']));
+    const availableNames = new Set(filtered.map(e => e['Entity Name'].trim()));
   
     const firstEntity = availableNames.has(urlEntity1) ? urlEntity1 : firstGroup[0]['Entity Name'];
     let secondEntity = availableNames.has(urlEntity2) ? urlEntity2 : firstGroup[1]?.['Entity Name'];
