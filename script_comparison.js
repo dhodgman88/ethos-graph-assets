@@ -343,11 +343,43 @@ const featureData = features.map((f, i) => {
     const annotations = [];
 
     labels.forEach(label => {
-      const [left, right] = label.split(' to ');
+      const [leftRaw, rightRaw] = label.split(' to ');
+
+      // Wrap each side at spaces
+      const wrapAtSpaces = str => (str || '').split(' ').join('\n');
+      const left = wrapAtSpaces(leftRaw);
+      const right = wrapAtSpaces(rightRaw);
+
       annotations.push(
-        { type: 'line', yMin: label, yMax: label, borderColor: 'gray', borderWidth: 2 },
-        { type: 'label', xValue: 0, yValue: label, content: left || '', position: { x: 'start', y: 'center' }, xAdjust: -150, backgroundColor: 'transparent', color: 'black', font: { size: 12 } },
-        { type: 'label', xValue: 1, yValue: label, content: right || '', position: { x: 'end', y: 'center' }, xAdjust: 150, backgroundColor: 'transparent', color: 'black', font: { size: 12 } }
+        {
+          type: 'line',
+          yMin: label,
+          yMax: label,
+          borderColor: 'gray',
+          borderWidth: 2
+        },
+        {
+          type: 'label',
+          xValue: 0,
+          yValue: label,
+          content: left,
+          position: { x: 'start', y: 'center' },
+          xAdjust: -50,  // was -150
+          backgroundColor: 'transparent',
+          color: 'black',
+          font: { size: 12, lineHeight: 1.2 }
+        },
+        {
+          type: 'label',
+          xValue: 1,
+          yValue: label,
+          content: right,
+          position: { x: 'end', y: 'center' },
+          xAdjust: 50,  // was 150
+          backgroundColor: 'transparent',
+          color: 'black',
+          font: { size: 12, lineHeight: 1.2 }
+        }
       );
     });
 
@@ -364,7 +396,7 @@ const featureData = features.map((f, i) => {
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
-        layout: { padding: { left: 150, right: 150, top: 20, bottom: 20 } },
+        layout: { padding: { left: 80, right: 80, top: 20, bottom: 20 } },
         scales: { x: { min: 0, max: 1, ticks: { stepSize: 0.5 } }, y: { type: 'category', labels, display: false, reverse: true, offset: true } },
         plugins: { legend: { position: 'top' }, annotation: { clip: false, annotations } }
       }
